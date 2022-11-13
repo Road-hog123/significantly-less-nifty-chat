@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name           Nifty Chat Monitor, Road-hog123 Customised
+// @name           Significantly Less Nifty Chat
 // @namespace      https://roadhog123.co.uk/
-// @description    inlines Images, GIPHY GIFs, YouTube Thumbnails and Tweets in Twitch chat
+// @description    inlines Images, GIPHY GIFs & YouTube Thumbnails in Twitch chat
 // @match          https://www.twitch.tv/*
-// @version        0.307-RHB
+// @version        1.0
 // @updateURL      https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/master/chat-monitor.user.js
 // @downloadURL    https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/master/chat-monitor.user.js
 // @require        https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js
@@ -13,10 +13,6 @@
 
 var MESSAGE_CONTAINER = ".chat-scrollable-area__message-container";
 waitForKeyElements(MESSAGE_CONTAINER, onChatLoad);
-var twitterScript = document.createElement("script");
-twitterScript.type = "text/javascript";
-twitterScript.src = "https://platform.twitter.com/widgets.js";
-document.body.appendChild(twitterScript);
 
 function onChatLoad() {
   // The node to be monitored
@@ -66,11 +62,6 @@ function onChatLoad() {
               linkImage(link.parentNode, thumbnailLink);
               return;
             }
-            let twitterID = getTweetID(link.href);
-            if (twitterID) {
-              linkTwitter(link.parentNode, twitterID);
-              return;
-            }
           });
       });
     });
@@ -100,11 +91,6 @@ function getYouTubeLink(url) {
   return ((match) ? "https://img.youtube.com/vi/" + match[1] + "/mqdefault.jpg" : "");
 }
 
-function getTweetID(url) {
-  let match = /^https?:\/\/(?:www\.)?twitter\.com.+\/([0-9]+)(?:\?.*)?$/gm.exec(url);
-  return ((match) ? match[1] : "");
-}
-
 function linkImage(node, imageURL) {
   var image = document.createElement("img");
   node.appendChild(image);
@@ -126,10 +112,4 @@ function linkVideo(node, videoURL) {
   video.src = videoURL;
   video.autoplay = video.loop = video.muted = true;
   video.addEventListener("canplay", function() {video.style.display = "block"});
-}
-
-function linkTwitter(node, tweetID) {
-  twttr.widgets
-    .createTweet(tweetID, node, {theme: "dark", conversation: "hidden", cards: "hidden"})
-    .catch(e => console.log(e));
 }
