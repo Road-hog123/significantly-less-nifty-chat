@@ -41,8 +41,8 @@ function onChatLoad() {
 
         //add inline images
         newNode.querySelectorAll(".chat-line__message a.link-fragment")
-          .forEach(function(link) {
-            let imageLink = getImageLink(link.href);
+          .forEach(async function(link) {
+            let imageLink = await getImageLink(link.href);
             if (imageLink) {
               linkImage(link.parentNode, imageLink);
               return;
@@ -71,8 +71,20 @@ function onChatLoad() {
   observer.observe(target, {childList: true});
 }
 
-function getImageLink(url) {
-  let match = /.*\.(?:jpe?g|png|gif|webp)(?:\?.*)?$/gim.exec(url);
+async function getImageLink(url) {
+  if (url.includes("imgur.com/a/"))
+  {
+      var albumID = url.split("/")[4];
+      var content = await ((await fetch(`https://api.imgur.com/3/album/${albumID}/images`, {
+          "headers": {
+              "Authorization": "Client-ID db1c3074b0b7efc"
+          }
+      })).json());
+      var doc = new DOMParser().parseFromString(content, "text/html");
+      var meta = doc.querySelector("meta[property='og:image']");
+      url = `https://i.imgur.com/${content.data[0].id}.png`;
+  }
+  let match = /.*\.(?:jpe?g|png|gif)(?:\?.*)?$/gim.exec(url);
   return ((match) ? match[0] : "").replace("media.giphy.com", "media1.giphy.com");
 }
 
