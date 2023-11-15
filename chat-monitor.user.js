@@ -72,7 +72,7 @@ function onChatLoad() {
 }
 
 function getImageLink(url) {
-  let match = /.*\.(?:jpe?g|png|gif)(?:\?.*)?$/gim.exec(url);
+  let match = /.*\.(?:jpe?g|png|gif|webp)(?:\?.*)?$/gim.exec(url);
   return ((match) ? match[0] : "").replace("media.giphy.com", "media1.giphy.com");
 }
 
