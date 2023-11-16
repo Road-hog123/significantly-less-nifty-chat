@@ -62,6 +62,11 @@ function onChatLoad() {
               linkImage(link.parentNode, thumbnailLink);
               return;
             }
+            let twitterLink = getTwitterLink(link.href);
+            if (twitterLink) {
+              linkTwitter(link.parentNode, twitterLink);
+              return;
+            }
           });
       });
     });
@@ -71,8 +76,33 @@ function onChatLoad() {
   observer.observe(target, {childList: true});
 }
 
+function setInnerHTMLAndExecuteScript(node, html) {
+  node.innerHTML = html;
+  Array.from(elnodem.querySelectorAll("script"))
+    .forEach( oldScriptElement => {
+      const newScriptElement = document.createElement("script");
+      Array.from(oldScriptElement.attributes).forEach( attr => {
+        newScriptElement.setAttribute(attr.name, attr.value)
+      });
+      const scriptText = document.createTextNode(oldScriptElement.innerHTML);
+      newScriptElement.appendChild(scriptText);
+      oldScriptElement.parentNode.replaceChild(newScriptElement, oldScriptElement);
+  });
+}
+
+function getTwitterLink(url) {
+    const regex = /((twitter)|x)\.com\/(?<user>[^\/]*)\/status\/(?<id>[^\/]*)/;
+    const data = url.match(regex);
+    if (!data) {
+        return "";
+    }
+    const sanitizedURL = `https://twitter.com/${data.groups.user}/status/${data.groups.id}`;
+    const output = `<blockquote ${(document.body.classList.contains("dark-theme") ? 'data-theme="dark"' : '')} class="twitter-tweet"><a href="${sanitizedURL}"></a><script src="https://platform.twitter.com/widgets.js" charset="utf-8"></script></blockquote>`;
+    return output || "";
+}
+
 function getImageLink(url) {
-  let match = /.*\.(?:jpe?g|png|gif|webp)(?:\?.*)?$/gim.exec(url);
+  let match = /.*\.(?:jpe?g|png|gif)(?:\?.*)?$/gim.exec(url);
   return ((match) ? match[0] : "").replace("media.giphy.com", "media1.giphy.com");
 }
 
@@ -112,4 +142,10 @@ function linkVideo(node, videoURL) {
   video.src = videoURL;
   video.autoplay = video.loop = video.muted = true;
   video.addEventListener("canplay", function() {video.style.display = "block"});
+}
+
+function linkTwitter(node, tweetHTML) {
+  var tweet = document.createElement("div");
+  node.appendChild(tweet);
+  setInnerHTML(tweet, tweetHTML);
 }
