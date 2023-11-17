@@ -11,7 +11,7 @@
 // @grant          GM_log
 // ==/UserScript==
 
-var MESSAGE_CONTAINER = ".chat-scrollable-area__message-container";
+var MESSAGE_CONTAINER = ".chat-scrollable-area__message-container, #seventv-message-container .seventv-chat-list";
 waitForKeyElements(MESSAGE_CONTAINER, onChatLoad);
 
 function onChatLoad() {
@@ -35,12 +35,12 @@ function onChatLoad() {
         }
 
         // Only treat chat messages
-        if (!newNode.classList.contains("chat-line__message")) {
+        if (!newNode.classList.contains("chat-line__message") && !newNode.classList.contains("seventv-message")) {
           return;
         }
 
         //add inline images
-        newNode.querySelectorAll(".chat-line__message a.link-fragment")
+        newNode.querySelectorAll(".chat-line__message a.link-fragment, .seventv-chat-message-body a")
           .forEach(async function(link) {
             let match = /[\/^]imgur\.com\/((?:a|gallery)\/)?(\w+)$/gim.exec(link.href);
             let url = ((match) ? await getImgurLink(match[1], match[2]) : link.href);
