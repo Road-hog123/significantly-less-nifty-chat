@@ -3,7 +3,7 @@
 // @namespace      https://roadhog123.co.uk/
 // @description    inlines Images, GIPHY GIFs & YouTube Thumbnails in Twitch chat
 // @match          https://www.twitch.tv/*
-// @version        1.0
+// @version        1.1
 // @updateURL      https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/master/chat-monitor.user.js
 // @downloadURL    https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/master/chat-monitor.user.js
 // @require        https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js
@@ -41,13 +41,15 @@ function onChatLoad() {
 
         //add inline images
         newNode.querySelectorAll(".chat-line__message a.link-fragment")
-          .forEach(function(link) {
-            let imageLink = getImageLink(link.href);
+          .forEach(async function(link) {
+            let match = /[\/^]imgur\.com\/((?:a|gallery)\/)?(\w+)$/gim.exec(link.href);
+            let url = ((match) ? await getImgurLink(match[1], match[2]) : link.href);
+            let imageLink = getImageLink(url);
             if (imageLink) {
               linkImage(link.parentNode, imageLink);
               return;
             }
-            let videoLink = getVideoLink(link.href);
+            let videoLink = getVideoLink(url);
             if (videoLink) {
               linkVideo(link.parentNode, videoLink);
               return;
@@ -69,6 +71,12 @@ function onChatLoad() {
 
   // Pass in the target node, as well as the observer options
   observer.observe(target, {childList: true});
+}
+
+async function getImgurLink(album, identifier) {
+  var apiLink = ((album) ? `https://api.imgur.com/3/album/${identifier}/images` : `https://api.imgur.com/3/image/${identifier}`);
+  var content = await ((await fetch(apiLink, { "headers": { "Authorization": "Client-ID db1c3074b0b7efc" } })).json());
+  return ((album) ? content.data[0].link : content.data.link);
 }
 
 function getImageLink(url) {
