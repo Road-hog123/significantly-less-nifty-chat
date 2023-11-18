@@ -1,0 +1,6 @@
+* eol=lf encoding=UTF-8 working-tree-encoding=UTF-8
+
+*.js text
+
+.github/ export-ignore
+.gitattributes text export-ignore
