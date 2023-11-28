@@ -69,12 +69,12 @@ function onChatLoad() {
             }
             let twitterLink = getTwitterLink(link.href);
             if (twitterLink) {
-              linkTwitter(link.parentNode, twitterLink);
+              linkMicroblog(link.parentNode, twitterLink);
               return;
             }
             let mastodonLink = await getMastodonLink(link.href);
             if (mastodonLink) {
-              linkMastodon(link.parentNode, mastodonLink);
+              linkMicroblog(link.parentNode, mastodonLink);
               return;
             }
           });
@@ -183,13 +183,7 @@ function linkVideo(node, videoURL) {
   video.addEventListener("canplay", function() {video.style.display = "block"});
 }
 
-function linkTwitter(node, tweetHTML) {
-  var tweet = document.createElement("div");
-  node.appendChild(tweet);
-  setInnerHTML(tweet, tweetHTML);
-}
-
-function linkMastodon(node, tweetHTML) {
+function linkMicroblog(node, tweetHTML) {
   var tweet = document.createElement("div");
   node.appendChild(tweet);
   setInnerHTML(tweet, tweetHTML);
