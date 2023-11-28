@@ -3,12 +3,15 @@
 // @namespace      https://roadhog123.co.uk/
 // @description    inlines Images, GIPHY GIFs & YouTube Thumbnails in Twitch chat
 // @match          https://www.twitch.tv/*
-// @version        1.1
+// @version        1.2
 // @updateURL      https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/master/chat-monitor.user.js
 // @downloadURL    https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/master/chat-monitor.user.js
 // @require        https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js
 // @require        https://gist.github.com/raw/2625891/waitForKeyElements.js
 // @grant          GM_log
+// @grant          GM.xmlHttpRequest
+// @connect        kind.social
+// @connect        *
 // ==/UserScript==
 
 var MESSAGE_CONTAINER = ".chat-scrollable-area__message-container";
@@ -69,6 +72,11 @@ function onChatLoad() {
               linkTwitter(link.parentNode, twitterLink);
               return;
             }
+            let mastodonLink = await getMastodonLink(link.href);
+            if (mastodonLink) {
+              linkMastodon(link.parentNode, mastodonLink);
+              return;
+            }
           });
       });
     });
@@ -93,20 +101,43 @@ function setInnerHTMLAndExecuteScript(node, html) {
 }
 
 function getTwitterLink(url) {
-  const regex = /((twitter)|x)\.com\/(?<user>[^\/]*)\/status\/(?<id>[^\/]*)/;
-  const data = url.match(regex);
-  if (!data) {
-    return "";
-  }
-  const sanitizedURL = `https://twitter.com/${data.groups.user}/status/${data.groups.id}`;
-  const output = `<blockquote ${(document.body.classList.contains("dark-theme") ? 'data-theme="dark"' : '')} class="twitter-tweet"><a href="${sanitizedURL}"></a><script src="https://platform.twitter.com/widgets.js" charset="utf-8"></script></blockquote>`;
-  return output || "";
+    const regex = /((twitter)|x)\.com\/(?<user>[^\/]*)\/status\/(?<id>[^\/]*)/;
+    const data = url.match(regex);
+    if (!data) {
+        return "";
+    }
+    const sanitizedURL = `https://twitter.com/${data.groups.user}/status/${data.groups.id}`;
+    const output = `<blockquote ${(document.body.classList.contains("dark-theme") ? 'data-theme="dark"' : '')} class="twitter-tweet"><a href="${sanitizedURL}"></a><script src="https://platform.twitter.com/widgets.js" charset="utf-8"></script></blockquote>`;
+    return output || "";
 }
 
 async function getImgurLink(album, identifier) {
   var apiLink = ((album) ? `https://api.imgur.com/3/album/${identifier}/images` : `https://api.imgur.com/3/image/${identifier}`);
   var content = await ((await fetch(apiLink, { "headers": { "Authorization": "Client-ID db1c3074b0b7efc" } })).json());
   return ((album) ? content.data[0].link : content.data.link);
+}
+
+async function getMastodonLink(url) {
+    const {origin, pathname} = new URL(url);
+    if (Array.from(pathname).filter(a=>a=="/").length < 2)
+    {
+      return "";
+    }
+
+    let isMastodon = false;
+    try
+    {
+        isMastodon = await GM.xmlHttpRequest({ url: `${origin}/.well-known/nodeinfo` }).then(a=>JSON.parse(a.responseText).links.some(a=>a.rel == "http://nodeinfo.diaspora.software/ns/schema/2.0"));
+    }
+    catch (e)
+    {
+        return "";
+    }
+    if (!isMastodon)
+    {
+        return "";
+    }
+    return `<iframe src="${url}/embed" class="mastodon-embed" style="max-width: 100%; border: 0" width="400" allowfullscreen="allowfullscreen"></iframe><script src="${origin}/embed.js" async="async"></script>`;
 }
 
 function getImageLink(url) {
@@ -153,6 +184,12 @@ function linkVideo(node, videoURL) {
 }
 
 function linkTwitter(node, tweetHTML) {
+  var tweet = document.createElement("div");
+  node.appendChild(tweet);
+  setInnerHTML(tweet, tweetHTML);
+}
+
+function linkMastodon(node, tweetHTML) {
   var tweet = document.createElement("div");
   node.appendChild(tweet);
   setInnerHTML(tweet, tweetHTML);
