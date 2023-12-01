@@ -11,6 +11,10 @@
 // @grant          GM_log
 // @grant          GM.xmlHttpRequest
 // @connect        kind.social
+// @connect        mastodon.social
+// @connect        tenforward.social
+// @connect        teal.social
+// @connect        jorts.horse
 // @connect        *
 // ==/UserScript==
 
@@ -186,5 +190,5 @@ function linkVideo(node, videoURL) {
 function linkMicroblog(node, tweetHTML) {
   var tweet = document.createElement("div");
   node.appendChild(tweet);
-  setInnerHTML(tweet, tweetHTML);
+  setInnerHTMLAndExecuteScript(tweet, tweetHTML);
 }
