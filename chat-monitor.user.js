@@ -46,27 +46,27 @@ function onChatLoad() {
             let url = ((match) ? await getImgurLink(match[1], match[2]) : link.href);
             let imageLink = getImageLink(url);
             if (imageLink) {
-              linkImage(link.parentNode, imageLink);
+              linkImage(newNode.firstChild, imageLink);
               return;
             }
             let videoLink = getVideoLink(url);
             if (videoLink) {
-              linkVideo(link.parentNode, videoLink);
+              linkVideo(newNode.firstChild, videoLink);
               return;
             }
             let giphyLink = getGiphyLink(link.href);
             if (giphyLink) {
-              linkImage(link.parentNode, giphyLink);
+              linkImage(newNode.firstChild, giphyLink);
               return;
             }
             let thumbnailLink = getYouTubeLink(link.href);
             if (thumbnailLink) {
-              linkImage(link.parentNode, thumbnailLink);
+              linkImage(newNode.firstChild, thumbnailLink);
               return;
             }
             let twitterLink = getTwitterLink(link.href);
             if (twitterLink) {
-              linkTwitter(link.parentNode, twitterLink);
+              linkTwitter(newNode.firstChild, twitterLink);
               return;
             }
           });
