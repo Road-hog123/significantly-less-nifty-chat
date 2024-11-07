@@ -18,7 +18,7 @@
 // @connect        *
 // ==/UserScript==
 
-var MESSAGE_CONTAINER = ".chat-scrollable-area__message-container";
+var MESSAGE_CONTAINER = ".chat-scrollable-area__message-container, #seventv-message-container .seventv-chat-list";
 waitForKeyElements(MESSAGE_CONTAINER, onChatLoad);
 
 function onChatLoad() {
@@ -42,43 +42,43 @@ function onChatLoad() {
         }
 
         // Only treat chat messages
-        if (!newNode.classList.contains("chat-line__message")) {
+        if (newNode.firstChild === null || !(newNode.firstChild.classList.contains("chat-line__message") || newNode.firstChild.classList.contains("seventv-message"))) {
           return;
         }
 
         //add inline images
-        newNode.querySelectorAll(".chat-line__message a.link-fragment")
+        newNode.querySelectorAll(".chat-line__message a.link-fragment, .seventv-chat-message-body a")
           .forEach(async function(link) {
-            let match = /[\/^]imgur\.com\/((?:a|gallery)\/)?(\w+)$/gim.exec(link.href);
+            let match = /imgur\.com\/((?:a|gallery)\/)?(?:\w+-)*(\w+)$/gim.exec(link.href);
             let url = ((match) ? await getImgurLink(match[1], match[2]) : link.href);
             let imageLink = getImageLink(url);
             if (imageLink) {
-              linkImage(link.parentNode, imageLink);
+              linkImage(newNode.firstChild, imageLink);
               return;
             }
             let videoLink = getVideoLink(url);
             if (videoLink) {
-              linkVideo(link.parentNode, videoLink);
+              linkVideo(newNode.firstChild, videoLink);
               return;
             }
             let giphyLink = getGiphyLink(link.href);
             if (giphyLink) {
-              linkImage(link.parentNode, giphyLink);
+              linkImage(newNode.firstChild, giphyLink);
               return;
             }
             let thumbnailLink = getYouTubeLink(link.href);
             if (thumbnailLink) {
-              linkImage(link.parentNode, thumbnailLink);
+              linkImage(newNode.firstChild, thumbnailLink);
               return;
             }
             let twitterLink = getTwitterLink(link.href);
             if (twitterLink) {
-              linkMicroblog(link.parentNode, twitterLink);
+              linkMicroblog(newNode.firstChild, twitterLink);
               return;
             }
             let mastodonLink = await getMastodonLink(link.href);
             if (mastodonLink) {
-              linkMicroblog(link.parentNode, mastodonLink);
+              linkMicroblog(newNode.firstChild, mastodonLink);
               return;
             }
           });
