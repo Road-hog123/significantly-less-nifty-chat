@@ -42,7 +42,7 @@ function onChatLoad() {
         //add inline images
         newNode.querySelectorAll(".chat-line__message a.link-fragment, .seventv-chat-message-body a")
           .forEach(async function(link) {
-            let match = /[\/^]imgur\.com\/((?:a|gallery)\/)?(\w+)$/gim.exec(link.href);
+            let match = /imgur\.com\/((?:a|gallery)\/)?(?:\w+-)*(\w+)$/gim.exec(link.href);
             let url = ((match) ? await getImgurLink(match[1], match[2]) : link.href);
             let imageLink = getImageLink(url);
             if (imageLink) {
