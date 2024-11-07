@@ -35,7 +35,7 @@ function onChatLoad() {
         }
 
         // Only treat chat messages
-        if (newNode.firstChild === null || (!newNode.firstChild.classList.contains("chat-line__message") && !newNode.firstChild.classList.contains("seventv-message"))) {
+        if (newNode.firstChild === null || !(newNode.firstChild.classList.contains("chat-line__message") || newNode.firstChild.classList.contains("seventv-message"))) {
           return;
         }
 
