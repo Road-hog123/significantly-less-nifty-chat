@@ -8,74 +8,116 @@
 // @downloadURL    https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/master/chat-monitor.user.js
 // @require        https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js
 // @require        https://gist.github.com/raw/2625891/waitForKeyElements.js
-// @grant          GM_log
 // ==/UserScript==
 
-var MESSAGE_CONTAINER = ".chat-scrollable-area__message-container, #seventv-message-container .seventv-chat-list";
+// matches against a pathname that ends with a image or video file extension
+const RE_DIRECT = /\/.+\.(?:jpe?g|png|gif|avif|webp|mp4)$/i;
+// matches against an imgur image/album/gallery pathname
+// album is truthy when the link is to an album/gallery (collection of multiple images)
+// id is the alphanumeric hash, ignoring the hyphen-separated prefix
+const RE_IMGUR = /\/(?<album>(?:a|gallery)\/)?(?:\w+-)*(?<id>\w+)$/i;
+// matches against a Giphy pathname, looks like a similar format to imgur
+const RE_GIPHY = /\/(?:\w+-)?(?<id>\w+)$/i;
+// matches against youtube.com and youtu.be video links
+// id is base64 video id
+const RE_YOUTUBE = /(?:youtu\.be\/|youtube\.com\/watch\?v=)(?<id>[\w-]+)/i;
+// matches against twitter/x pathname
+// user is alphanumeric (and underscores) between 4 and 15 characters
+// id is unsigned integer (64 bit, so must be handled as string)
+const RE_TWITTER = /\/(?<user>\w{4,15})\/status\/(?<id>\d+)/i;
+
+const MESSAGE_CONTAINER = ".chat-scrollable-area__message-container, #seventv-message-container .seventv-chat-list";
 waitForKeyElements(MESSAGE_CONTAINER, onChatLoad);
 
 function onChatLoad() {
-    // The node to be monitored
-    var target = document.querySelector(MESSAGE_CONTAINER);
-
-    // Create an observer instance
     var observer = new MutationObserver(function(mutations) {
         mutations.forEach(function(mutation) {
-            // Get list of new nodes
-            var newNodes = mutation.addedNodes;
+            mutation.addedNodes.forEach(function(newNode) {
+                // the parent node for our image/video/post
+                let parent = newNode.querySelector(".chat-line__message-container");
+                if (parent === null) return; // new node was not a message
 
-            // Check if there are new nodes added
-            if (newNodes == null) {
-                return;
-            }
-
-            newNodes.forEach(function(newNode) {
-                if (newNode.nodeType !== Node.ELEMENT_NODE) {
-                    return;
-                }
-
-                // Only treat chat messages
-                if (newNode.firstChild === null || !(newNode.firstChild.classList.contains("chat-line__message") || newNode.firstChild.classList.contains("seventv-message"))) {
-                    return;
-                }
-
-                //add inline images
-                newNode.querySelectorAll(".chat-line__message a.link-fragment, .seventv-chat-message-body a")
-                    .forEach(async function(link) {
-                        let match = /imgur\.com\/((?:a|gallery)\/)?(?:\w+-)*(\w+)$/gim.exec(link.href);
-                        let url = ((match) ? await getImgurLink(match[1], match[2]) : link.href);
-                        let imageLink = getImageLink(url);
-                        if (imageLink) {
-                            linkImage(newNode.firstChild, imageLink);
-                            return;
-                        }
-                        let videoLink = getVideoLink(url);
-                        if (videoLink) {
-                            linkVideo(newNode.firstChild, videoLink);
-                            return;
-                        }
-                        let giphyLink = getGiphyLink(link.href);
-                        if (giphyLink) {
-                            linkImage(newNode.firstChild, giphyLink);
-                            return;
-                        }
-                        let thumbnailLink = getYouTubeLink(link.href);
-                        if (thumbnailLink) {
-                            linkImage(newNode.firstChild, thumbnailLink);
-                            return;
-                        }
-                        let twitterLink = getTwitterLink(link.href);
-                        if (twitterLink) {
-                            linkTwitter(newNode.firstChild, twitterLink);
-                            return;
-                        }
-                    });
+                // process each link within the message
+                parent.querySelectorAll("a.link-fragment, .seventv-chat-message-body a")
+                    .forEach(function(link) { processLink(parent, link) });
             });
         });
     });
 
-    // Pass in the target node, as well as the observer options
-    observer.observe(target, {childList: true});
+    // monitor chat room for the addition or removal or child nodes (usually messages)
+    observer.observe(document.querySelector(MESSAGE_CONTAINER), {childList: true});
+}
+
+function processLink(parent, link) {
+    console.debug(`Detected link '${link.href}' ...`)
+    const url = new URL(link.href);
+    // if the pathname ends with an image/video file extension then it can be inlined without special treatment
+    let match = url.pathname.match(RE_DIRECT);
+    if (match) {
+        return linkImageOrVideo(parent, url);
+    }
+    // not sure if this is the best solution, but direct string matching seems better than regex?
+    switch (url.hostname) {
+        case "imgur.com":
+            return linkImgur(parent, url);
+        case "giphy.com":
+            return linkGiphy(parent, url);
+        case "youtu.be":
+        case "youtube.com":
+        case "www.youtu.be":
+        case "www.youtube.com":
+            return linkYouTube(parent, url);
+        case "x.com":
+        case "twitter.com":
+            return linkTwitter(parent, url);
+    }
+    console.debug("Link was not inlined.")
+}
+
+async function linkImgur(parent, url) {
+    const match = url.pathname.match(RE_IMGUR);
+    if (!match) {
+        console.debug(`imgur.com link '${url.pathname}' did not match regex`);
+        return;
+    }
+    var apiLink = "https://api.imgur.com/3/" + ((match.groups.album) ? `album/${match.groups.id}/images` : `image/${match.groups.id}`);
+    var content = await ((await fetch(apiLink, { "headers": { "Authorization": "Client-ID db1c3074b0b7efc" } })).json());
+    var image = (match.groups.album) ? content.data[0] : content.data;
+    linkImageOrVideo(parent, new URL((Object.hasOwn(image, "mp4") && image.mp4) ? image.mp4 : image.link));
+}
+
+function linkGiphy(parent, url) {
+    const match = url.pathname.match(RE_GIPHY);
+    if (!match) {
+        console.debug(`giphy.com link '${url.pathname}' did not match regex`);
+        return;
+    }
+    linkImageOrVideo(parent, new URL(`https://media1.giphy.com/media/${match.groups.id}/giphy.gif`));
+}
+
+function linkYouTube(parent, url) {
+    const match = url.href.match(RE_YOUTUBE);
+    if (!match) {
+        console.debug(`youtube link '${url.href}' did not match regex`);
+        return;
+    }
+    linkImageOrVideo(parent, new URL(`https://img.youtube.com/vi/${match.groups.id}/mqdefault.jpg`));
+}
+
+function linkImageOrVideo(parent, url) {
+    console.debug(`Inlining image or video with url '${url.href}'`);
+    const video = url.pathname.endsWith("mp4")
+    const elem = document.createElement((video) ? "video" : "img");
+    parent.appendChild(elem);
+    elem.style.display = "none";
+    elem.style.maxWidth = "100%";
+    elem.style.maxHeight = "50vh";
+    elem.style.margin = "0.25em auto 0";
+    elem.src = url.href.replace("media.giphy.com", "media1.giphy.com");
+    if (video) {
+        elem.autoplay = elem.loop = elem.muted = true;
+    }
+    elem.addEventListener((video) ? "canplay" : "load", function() {elem.style.display = "block"})
 }
 
 function setInnerHTMLAndExecuteScript(node, html) {
@@ -92,68 +134,16 @@ function setInnerHTMLAndExecuteScript(node, html) {
     });
 }
 
-function getTwitterLink(url) {
-    const regex = /((twitter)|x)\.com\/(?<user>[^\/]*)\/status\/(?<id>[^\/]*)/;
-    const data = url.match(regex);
-    if (!data) {
-        return "";
+function linkTwitter(parent, url) {
+    console.debug(`Inlining tweet with url '${url.href}'`);
+    const match = url.pathname.match(RE_TWITTER);
+    if (!match) {
+        console.debug(`twitter link '${url.pathname}' did not match regex`);
+        return;
     }
-    const sanitizedURL = `https://twitter.com/${data.groups.user}/status/${data.groups.id}`;
-    const output = `<blockquote data-conversation="none" data-dnt="true" ${(document.documentElement.classList.contains("tw-root--theme-dark") ? 'data-theme="dark"' : '')} class="twitter-tweet"><a href="${sanitizedURL}"></a><script src="https://platform.twitter.com/widgets.js" charset="utf-8"></script></blockquote>`;
-    return output || "";
-}
-
-async function getImgurLink(album, identifier) {
-    var apiLink = ((album) ? `https://api.imgur.com/3/album/${identifier}/images` : `https://api.imgur.com/3/image/${identifier}`);
-    var content = await ((await fetch(apiLink, { "headers": { "Authorization": "Client-ID db1c3074b0b7efc" } })).json());
-    return ((album) ? content.data[0].link : content.data.link);
-}
-
-function getImageLink(url) {
-    let match = /.*\.(?:jpe?g|png|gif|avif|webp)(?:\?.*)?$/gim.exec(url);
-    return ((match) ? match[0] : "").replace("media.giphy.com", "media1.giphy.com");
-}
-
-function getVideoLink(url) {
-    let match = /.*\.(?:mp4)(?:\?.*)?$/gim.exec(url);
-    return ((match) ? match[0] : "");
-}
-
-function getGiphyLink(url) {
-    let match = /^https?:\/\/giphy\.com\/gifs\/(?:.*-)?([a-zA-Z0-9]+)$/gm.exec(url);
-    return ((match) ? "https://media1.giphy.com/media/" + match[1] + "/giphy.gif" : "");
-}
-
-function getYouTubeLink(url) {
-    let match = /^https?:\/\/(?:www\.)?(?:youtu\.be\/|youtube\.com\/watch\?v=)([^&?]+).*$/gm.exec(url);
-    return ((match) ? "https://img.youtube.com/vi/" + match[1] + "/mqdefault.jpg" : "");
-}
-
-function linkImage(node, imageURL) {
-    var image = document.createElement("img");
-    node.appendChild(image);
-    image.style.display = "none";
-    image.style.maxWidth = "100%";
-    image.style.maxHeight = "50vh";
-    image.style.margin = "0.25em auto 0";
-    image.src = imageURL;
-    image.addEventListener("load", function() {image.style.display = "block"})
-}
-
-function linkVideo(node, videoURL) {
-    var video = document.createElement("video");
-    node.appendChild(video);
-    video.style.display = "none";
-    video.style.maxWidth = "100%";
-    video.style.maxHeight = "50vh";
-    video.style.margin = "0.25em auto 0";
-    video.src = videoURL;
-    video.autoplay = video.loop = video.muted = true;
-    video.addEventListener("canplay", function() {video.style.display = "block"});
-}
-
-function linkTwitter(node, tweetHTML) {
+    const sanitizedURL = `https://twitter.com/${match.groups.user}/status/${match.groups.id}`;
+    const tweetHTML = `<blockquote data-conversation="none" data-dnt="true" ${(document.documentElement.classList.contains("tw-root--theme-dark") ? 'data-theme="dark"' : '')} class="twitter-tweet"><a href="${sanitizedURL}"></a><script src="https://platform.twitter.com/widgets.js" charset="utf-8"></script></blockquote>`;
     var tweet = document.createElement("div");
-    node.appendChild(tweet);
+    parent.appendChild(tweet);
     setInnerHTMLAndExecuteScript(tweet, tweetHTML);
 }
