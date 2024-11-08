@@ -80,7 +80,7 @@ function onChatLoad() {
 
 function setInnerHTMLAndExecuteScript(node, html) {
   node.innerHTML = html;
-  Array.from(elnodem.querySelectorAll("script"))
+  Array.from(node.querySelectorAll("script"))
     .forEach( oldScriptElement => {
       const newScriptElement = document.createElement("script");
       Array.from(oldScriptElement.attributes).forEach( attr => {
@@ -99,7 +99,7 @@ function getTwitterLink(url) {
     return "";
   }
   const sanitizedURL = `https://twitter.com/${data.groups.user}/status/${data.groups.id}`;
-  const output = `<blockquote ${(document.body.classList.contains("dark-theme") ? 'data-theme="dark"' : '')} class="twitter-tweet"><a href="${sanitizedURL}"></a><script src="https://platform.twitter.com/widgets.js" charset="utf-8"></script></blockquote>`;
+  const output = `<blockquote data-conversation="none" data-dnt="true" ${(document.documentElement.classList.contains("tw-root--theme-dark") ? 'data-theme="dark"' : '')} class="twitter-tweet"><a href="${sanitizedURL}"></a><script src="https://platform.twitter.com/widgets.js" charset="utf-8"></script></blockquote>`;
   return output || "";
 }
 
@@ -155,5 +155,5 @@ function linkVideo(node, videoURL) {
 function linkTwitter(node, tweetHTML) {
   var tweet = document.createElement("div");
   node.appendChild(tweet);
-  setInnerHTML(tweet, tweetHTML);
+  setInnerHTMLAndExecuteScript(tweet, tweetHTML);
 }
