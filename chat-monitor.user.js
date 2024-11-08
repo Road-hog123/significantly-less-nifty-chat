@@ -92,7 +92,7 @@ function onChatLoad() {
 
 function setInnerHTMLAndExecuteScript(node, html) {
   node.innerHTML = html;
-  Array.from(elnodem.querySelectorAll("script"))
+  Array.from(node.querySelectorAll("script"))
     .forEach( oldScriptElement => {
       const newScriptElement = document.createElement("script");
       Array.from(oldScriptElement.attributes).forEach( attr => {
