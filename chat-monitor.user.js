@@ -25,6 +25,13 @@ const RE_YOUTUBE = /(?:youtu\.be\/|youtube\.com\/watch\?v=)(?<id>[\w-]+)/i;
 // user is alphanumeric (and underscores) between 4 and 15 characters
 // id is unsigned integer (64 bit, so must be handled as string)
 const RE_TWITTER = /\/(?<user>\w{4,15})\/status\/(?<id>\d+)/i;
+// matches against bluesky pathname
+// user can use a custom domain—might need to expand the allowed characters
+// post is alphanumeric
+const RE_BLUESKY = /\/profile\/(?<user>[\w\.]+)\/post\/(?<post>\w+)/i;
+// matches against mastodon pathname
+// id is unsigned integer
+const RE_MASTODON = /\/@\w+(?:@\w+(?:\.\w+)+)?\/(?<id>\d+)/i;
 
 const MESSAGE_CONTAINER = ".chat-scrollable-area__message-container, #seventv-message-container .seventv-chat-list";
 waitForKeyElements(MESSAGE_CONTAINER, onChatLoad);
@@ -48,7 +55,7 @@ function onChatLoad() {
     observer.observe(document.querySelector(MESSAGE_CONTAINER), {childList: true});
 }
 
-function processLink(parent, link) {
+async function processLink(parent, link) {
     console.debug(`Detected link '${link.href}' ...`)
     const url = new URL(link.href);
     // if the pathname ends with an image/video file extension then it can be inlined without special treatment
@@ -70,8 +77,25 @@ function processLink(parent, link) {
         case "x.com":
         case "twitter.com":
             return linkTwitter(parent, url);
+        case "bsky.app":
+            return linkBluesky(parent, url);
+        default:
+            if (await isMastodon(url)) {
+                return linkMastodon(parent, url);
+            }
     }
     console.debug("Link was not inlined.")
+}
+
+async function isMastodon(url) {
+    // mastodon urls have very little in common
+    if (!url.pathname.startsWith("/@")) return false;
+    // the only reliable way to tell is to make a request
+    console.debug(`Testing if '${url.origin}' is a Mastodon instance ...`);
+    const response = await fetch(`${url.origin}/.well-known/nodeinfo`);
+    if (!response.ok) return false;
+    const json = await response.json();
+    return json.links.some(a=>a.rel == "http://nodeinfo.diaspora.software/ns/schema/2.0");
 }
 
 async function linkImgur(parent, url) {
@@ -146,4 +170,83 @@ function linkTwitter(parent, url) {
     var tweet = document.createElement("div");
     parent.appendChild(tweet);
     setInnerHTMLAndExecuteScript(tweet, tweetHTML);
+}
+
+function linkMicroblog(parent, avatarUrl, userUrl, username, dispname, content) {
+    const fragment = document.createDocumentFragment();
+    const article = document.createElement("article");
+    fragment.appendChild(article);
+    article.style.margin = ".25em auto 0";
+    article.style.border = "1px solid #fff";
+    article.style.borderRadius = "1em";
+    article.style.padding = ".5em";
+    const author = document.createElement("a");
+    article.appendChild(author);
+    author.href = userUrl;
+    author.rel = "author nofollow noopener noreferrer";
+    author.target = "_blank";
+    const avatar = document.createElement("img");
+    author.appendChild(avatar);
+    avatar.src = avatarUrl;
+    avatar.style.height = avatar.style.width = "2lh";
+    avatar.style.borderRadius = ".5em";
+    const names = document.createElement("div");
+    author.appendChild(names);
+    names.style.display = "inline-block";
+    names.style.marginLeft = ".5em";
+    const display = document.createElement("span");
+    names.appendChild(display);
+    display.textContent = dispname;
+    display.style.fontWeight = "bold";
+    names.appendChild(document.createElement("br"));
+    const user = document.createElement("span");
+    names.appendChild(user);
+    user.textContent = username;
+    article.innerHTML += content;
+    article.querySelector("p").style.marginTop = ".5em";
+    parent.appendChild(fragment);
+}
+
+async function linkBluesky(parent, url) {
+    const match = url.pathname.match(RE_BLUESKY);
+    if (!match) {
+        console.debug(`bluesky link '${url.pathname}' did not match regex`);
+        return;
+    }
+    const response = await fetch(`https://public.api.bsky.app/xrpc/app.bsky.feed.getPostThread?uri=at://${match.groups.user}/app.bsky.feed.post/${match.groups.post}&depth=0&parentHeight=0`);
+    if (!response.ok) {
+        console.log(`Request to ${response.url} failed`);
+        return;
+    }
+    const json = await response.json();
+    linkMicroblog(
+        parent,
+        json.thread.post.author.avatar,
+        `https://bsky.app/profile/${json.thread.post.author.handle}`,
+        "@" + json.thread.post.author.handle,
+        json.thread.post.author.displayName,
+        `<p>${json.thread.post.record.text}</p>`,
+    );
+}
+
+async function linkMastodon(parent, url) {
+    const match = url.pathname.match(RE_MASTODON);
+    if (!match) {
+        console.debug(`mastodon link '${url.pathname}' did not match regex`);
+        return;
+    }
+    const response = await fetch(`${url.origin}/api/v1/statuses/${match.groups.id}`);
+    if (!response.ok) {
+        console.log(`Request to ${response.url} failed`);
+        return;
+    }
+    const json = await response.json();
+    linkMicroblog(
+        parent,
+        json.account.avatar,
+        json.account.url,
+        "@" + json.account.username + "@" + (new URL(json.account.url)).hostname,
+        json.account.display_name,
+        json.content,
+    );
 }
