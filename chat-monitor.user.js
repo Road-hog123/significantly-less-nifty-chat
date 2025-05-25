@@ -11,20 +11,20 @@
 // ==/UserScript==
 
 // matches against a pathname that ends with a image or video file extension
-const RE_DIRECT = /\/.+\.(?:jpe?g|png|gif|avif|webp|mp4)$/i;
+const RE_DIRECT = /^\/.+\.(?:jpe?g|png|gif|avif|webp|mp4)$/i;
 // matches against an imgur image/album/gallery pathname
 // album is truthy when the link is to an album/gallery (collection of multiple images)
 // id is the alphanumeric hash, ignoring the hyphen-separated prefix
-const RE_IMGUR = /\/(?<album>(?:a|gallery)\/)?(?:\w+-)*(?<id>\w+)$/i;
+const RE_IMGUR = /^\/(?<album>(?:a|gallery)\/)?(?:\w+-)*(?<id>\w+)$/i;
 // matches against a Giphy pathname, looks like a similar format to imgur
-const RE_GIPHY = /\/(?:\w+-)?(?<id>\w+)$/i;
+const RE_GIPHY = /^\/(?:\w+-)?(?<id>\w+)$/i;
 // matches against youtube.com and youtu.be video links
 // id is base64 video id
 const RE_YOUTUBE = /(?:youtu\.be\/|youtube\.com\/watch\?v=)(?<id>[\w-]+)/i;
 // matches against twitter/x pathname
 // user is alphanumeric (and underscores) between 4 and 15 characters
 // id is unsigned integer (64 bit, so must be handled as string)
-const RE_TWITTER = /\/(?<user>\w{4,15})\/status\/(?<id>\d+)/i;
+const RE_TWITTER = /^\/(?<user>\w{4,15})\/status\/(?<id>\d+)$/i;
 
 const MESSAGE_CONTAINER = ".chat-scrollable-area__message-container, #seventv-message-container .seventv-chat-list";
 waitForKeyElements(MESSAGE_CONTAINER, onChatLoad);
