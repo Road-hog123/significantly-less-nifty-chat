@@ -17,7 +17,7 @@ const RE_DIRECT = /^\/.+\.(?:jpe?g|png|gif|avif|webp|mp4)$/i;
 // id is the alphanumeric hash, ignoring the hyphen-separated prefix
 const RE_IMGUR = /^\/(?<album>(?:a|gallery)\/)?(?:\w+-)*(?<id>\w+)$/i;
 // matches against a Giphy pathname, looks like a similar format to imgur
-const RE_GIPHY = /^\/(?:\w+-)?(?<id>\w+)$/i;
+const RE_GIPHY = /^\/(?:gifs\/)?(?:\w+-)*(?<id>\w+)$/i;
 // matches against youtube.com and youtu.be video links
 // id is base64 video id
 const RE_YOUTUBE = /(?:youtu\.be\/|youtube\.com\/watch\?v=)(?<id>[\w-]+)/i;
