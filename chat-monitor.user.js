@@ -12,11 +12,8 @@
 
 // matches against a pathname that ends with a image or video file extension
 const RE_DIRECT = /^\/.+\.(?:jpe?g|png|gif|avif|webp|mp4)$/i;
-// matches against an imgur image/album/gallery pathname
-// album is truthy when the link is to an album/gallery (collection of multiple images)
+// matches against a Giphy pathname
 // id is the alphanumeric hash, ignoring the hyphen-separated prefix
-const RE_IMGUR = /^\/(?<album>(?:a|gallery)\/)?(?:\w+-)*(?<id>\w+)$/i;
-// matches against a Giphy pathname, looks like a similar format to imgur
 const RE_GIPHY = /^\/(?:gifs\/)?(?:\w+-)*(?<id>\w+)$/i;
 // matches against youtube.com and youtu.be video links
 // id is base64 video id
@@ -58,8 +55,6 @@ function processLink(parent, link) {
     }
     // not sure if this is the best solution, but direct string matching seems better than regex?
     switch (url.hostname) {
-        case "imgur.com":
-            return linkImgur(parent, url);
         case "giphy.com":
             return linkGiphy(parent, url);
         case "youtu.be":
@@ -72,18 +67,6 @@ function processLink(parent, link) {
             return linkTwitter(parent, url);
     }
     console.debug("Link was not inlined.")
-}
-
-async function linkImgur(parent, url) {
-    const match = url.pathname.match(RE_IMGUR);
-    if (!match) {
-        console.debug(`imgur.com link '${url.pathname}' did not match regex`);
-        return;
-    }
-    var apiLink = "https://api.imgur.com/3/" + ((match.groups.album) ? `album/${match.groups.id}/images` : `image/${match.groups.id}`);
-    var content = await ((await fetch(apiLink, { "headers": { "Authorization": "Client-ID db1c3074b0b7efc" } })).json());
-    var image = (match.groups.album) ? content.data[0] : content.data;
-    linkImageOrVideo(parent, new URL((Object.hasOwn(image, "mp4") && image.mp4) ? image.mp4 : image.link));
 }
 
 function linkGiphy(parent, url) {

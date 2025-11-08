@@ -10,7 +10,6 @@ created by Paul and with contributions from
 
 ### Features
 - inlines linked images
-- inlines imgur image/album/gallery links
 - inlines GIPHY GIFs
 - inlines thumbnail images for YouTube video links
 - inlines embeds for linked Tweets
@@ -37,7 +36,7 @@ Tampermonkey userscript
 ## Usage
 - This userscript should work on any live chat on twitch.tv - it won't work on
 VOD chats.
-- When posting a link in chat, note that unless it is an imgur, GIPHY or YouTube
-link it won't be inlined if it doesn't end in an image extension, or if the url
+- When posting a link in chat, note that unless it is a GIPHY or YouTube link
+it won't be inlined if it doesn't end in an image extension, or if the url
 involves ports.
 - Tweet embeds may be blocked by Firefox's Enhanced Tracking Protection.
