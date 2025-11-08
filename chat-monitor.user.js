@@ -6,8 +6,6 @@
 // @version        1.3
 // @updateURL      https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/master/chat-monitor.user.js
 // @downloadURL    https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/master/chat-monitor.user.js
-// @require        https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js
-// @require        https://gist.github.com/raw/2625891/waitForKeyElements.js
 // ==/UserScript==
 
 // matches against a pathname that ends with a image or video file extension
@@ -24,9 +22,31 @@ const RE_YOUTUBE = /(?:youtu\.be\/|youtube\.com\/watch\?v=)(?<id>[\w-]+)/i;
 const RE_TWITTER = /^\/(?<user>\w{4,15})\/status\/(?<id>\d+)$/i;
 
 const MESSAGE_CONTAINER = ".chat-scrollable-area__message-container, #seventv-message-container .seventv-chat-list";
-waitForKeyElements(MESSAGE_CONTAINER, onChatLoad);
+waitForElement(MESSAGE_CONTAINER).then(onChatLoad);
 
-function onChatLoad() {
+function waitForElement(selector) {
+    return new Promise(resolve => {
+        // if life were simple the chat window would exist when the script runs...
+        const element = document.querySelector(selector);
+        if (element) {
+            return resolve(element);
+        }
+        // but chances are we'll have to watch the whole document tree,
+        // waiting for an element to be modified into a form we can recognise as "chat window"...
+        // (no, the element is not *added* in a form we can recognise, the class is added later...)
+        const observer = new MutationObserver(mutations => {
+            mutations.some(mutation => {
+                if (mutation.target.matches?.(selector)) {
+                    observer.disconnect();
+                    return resolve(mutation.target);
+                }
+            })
+        });
+        observer.observe(document.body, {childList: true, subtree: true});
+    });
+}
+
+function onChatLoad(container) {
     var observer = new MutationObserver(function(mutations) {
         mutations.forEach(function(mutation) {
             mutation.addedNodes.forEach(function(newNode) {
@@ -42,7 +62,7 @@ function onChatLoad() {
     });
 
     // monitor chat room for the addition or removal or child nodes (usually messages)
-    observer.observe(document.querySelector(MESSAGE_CONTAINER), {childList: true});
+    observer.observe(container, {childList: true});
 }
 
 function processLink(parent, link) {
