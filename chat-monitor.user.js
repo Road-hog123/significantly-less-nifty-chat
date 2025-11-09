@@ -27,8 +27,11 @@ const RE_YOUTUBE = /(?:youtu\.be\/|youtube\.com\/watch\?v=)(?<id>[\w-]+)/i;
 // id is unsigned integer (64 bit, so must be handled as string)
 const RE_TWITTER = /^\/(?<user>\w{4,15})\/status\/(?<id>\d+)$/i;
 
-const MESSAGE_CONTAINER = ".chat-scrollable-area__message-container, #seventv-message-container .seventv-chat-list";
-waitForElement(MESSAGE_CONTAINER).then(onChatLoad);
+const CHAT_LIST = ".chat-scrollable-area__message-container, #seventv-message-container .seventv-chat-list";
+const CHAT_MESSAGE = ".chat-line__message-container";
+const CHAT_LINK = "a.link-fragment, .seventv-chat-message-body a";
+
+waitForElement(CHAT_LIST).then(onChatLoad);
 
 function waitForElement(selector) {
     return new Promise(resolve => {
@@ -53,16 +56,15 @@ function waitForElement(selector) {
 }
 
 function onChatLoad(container) {
-    var observer = new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
-            mutation.addedNodes.forEach(function(newNode) {
+    const observer = new MutationObserver(mutations => {
+        mutations.forEach(mutation => {
+            mutation.addedNodes.forEach(newNode => {
                 // the parent node for our image/video/post
-                let parent = newNode.querySelector(".chat-line__message-container");
-                if (parent === null) return; // new node was not a message
-
+                const parent = newNode.querySelector(CHAT_MESSAGE);
+                if (!parent) return; // new node was not a message
                 // process each link within the message
-                parent.querySelectorAll("a.link-fragment, .seventv-chat-message-body a")
-                    .forEach(function(link) { processLink(parent, link) });
+                const processLink_ = link => processLink(parent, link);
+                parent.querySelectorAll(CHAT_LINK).forEach(processLink_);
             });
         });
     });
@@ -72,27 +74,30 @@ function onChatLoad(container) {
 }
 
 function processLink(parent, link) {
-    console.debug(`Detected link '${link.href}' ...`)
+    console.debug(`Detected link '${link.href}' ...`);
     const url = new URL(link.href);
     // if the pathname ends with an image/video file extension then it can be inlined without special treatment
-    let match = url.pathname.match(RE_DIRECT);
-    if (match) {
-        return linkImageOrVideo(parent, url);
+    if (url.pathname.match(RE_DIRECT)) {
+        linkImageOrVideo(parent, url);
+        return;
     }
     // not sure if this is the best solution, but direct string matching seems better than regex?
     switch (url.hostname) {
         case "giphy.com":
-            return linkGiphy(parent, url);
+            linkGiphy(parent, url);
+            return;
         case "youtu.be":
         case "youtube.com":
         case "www.youtu.be":
         case "www.youtube.com":
-            return linkYouTube(parent, url);
+            linkYouTube(parent, url);
+            return;
         case "x.com":
         case "twitter.com":
-            return linkTwitter(parent, url);
+            linkTwitter(parent, url);
+            return;
     }
-    console.debug("Link was not inlined.")
+    console.debug("Link was not inlined.");
 }
 
 function linkGiphy(parent, url) {
@@ -114,8 +119,8 @@ function linkYouTube(parent, url) {
 }
 
 function linkImageOrVideo(parent, url) {
-    console.debug(`Inlining image or video with url '${url.href}'`);
-    const video = url.pathname.endsWith("mp4")
+    const video = url.pathname.endsWith("mp4");
+    console.debug(`Inlining ${(video) ? "video" : "image"} with url '${url.href}'`);
     const elem = document.createElement((video) ? "video" : "img");
     parent.appendChild(elem);
     elem.style.display = "none";
@@ -123,7 +128,7 @@ function linkImageOrVideo(parent, url) {
     if (video) {
         elem.autoplay = elem.loop = elem.muted = true;
     }
-    elem.addEventListener((video) ? "canplay" : "load", function() {elem.style.removeProperty("display")})
+    elem.addEventListener((video) ? "canplay" : "load", () => elem.style.removeProperty("display"));
 }
 
 function setInnerHTMLAndExecuteScript(node, html) {
