@@ -6,6 +6,8 @@
 // @version        1.3
 // @updateURL      https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/master/chat-monitor.user.js
 // @downloadURL    https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/master/chat-monitor.user.js
+// @grant          GM_getValue
+// @grant          GM_setValue
 // @grant          GM_addStyle
 // @grant          GM_getResourceText
 // @resource style https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/master/chat-monitor.css
@@ -13,6 +15,8 @@
 
 // inject stylesheet
 GM_addStyle(GM_getResourceText("style"));
+var reminders = GM_getValue("hideRemindersUntil", 0) < Date.now();
+console.debug(`Usage reminders ${(reminders) ? "en" : "dis"}abled`);
 
 // matches against a pathname that ends with a image or video file extension
 const RE_DIRECT = /^\/.+\.(?:jpe?g|png|gif|avif|webp|mp4)$/i;
@@ -83,6 +87,13 @@ function processLink(parent, link) {
     }
     // not sure if this is the best solution, but direct string matching seems better than regex?
     switch (url.hostname) {
+        case "imgur.com":
+            if (url.pathname.startsWith("/album/")) break;
+        case "gyazo.com":
+            if (url.pathname.startsWith("/collections/")) break;
+        case "tenor.com":
+            remindExtension(parent);
+            return;
         case "giphy.com":
             linkGiphy(parent, url);
             return;
@@ -98,6 +109,42 @@ function processLink(parent, link) {
             return;
     }
     console.debug("Link was not inlined.");
+}
+
+function remindExtension(parent) {
+    if (!reminders) return;
+    const fragment = document.createDocumentFragment();
+    const notice = document.createElement("div");
+    notice.className = "notice";
+    const message = document.createElement("i");
+    message.append(
+        "This link cannot be inlined,",
+        document.createElement("br"),
+        "please use the direct image link instead.",
+    );
+    const dismiss = document.createElement("button");
+    dismiss.textContent = "Dismiss";
+    dismiss.addEventListener("click", dismissReminders);
+    const hide = document.createElement("button");
+    hide.textContent = "Hide for 1 year";
+    hide.addEventListener("click", hideReminders);
+    dismiss.type = hide.type = "button";
+    const buttons = document.createElement("div");
+    buttons.append(dismiss, hide);
+    notice.append(message, buttons);
+    fragment.appendChild(notice);
+    parent.appendChild(fragment);
+}
+
+function dismissReminders() {
+    reminders = false;
+    document.querySelectorAll("div.notice").forEach(notice => notice.remove());
+}
+
+function hideReminders() {
+    dismissReminders();
+    // approximately 359 days in the future
+    GM_setValue("hideRemindersUntil", Date.now() + 31000000000);
 }
 
 function linkGiphy(parent, url) {
