@@ -6,7 +6,13 @@
 // @version        1.3
 // @updateURL      https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/master/chat-monitor.user.js
 // @downloadURL    https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/master/chat-monitor.user.js
+// @grant          GM_addStyle
+// @grant          GM_getResourceText
+// @resource style https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/master/chat-monitor.css
 // ==/UserScript==
+
+// inject stylesheet
+GM_addStyle(GM_getResourceText("style"));
 
 // matches against a pathname that ends with a image or video file extension
 const RE_DIRECT = /^\/.+\.(?:jpe?g|png|gif|avif|webp|mp4)$/i;
@@ -113,14 +119,11 @@ function linkImageOrVideo(parent, url) {
     const elem = document.createElement((video) ? "video" : "img");
     parent.appendChild(elem);
     elem.style.display = "none";
-    elem.style.maxWidth = "100%";
-    elem.style.maxHeight = "50vh";
-    elem.style.margin = "0.25em auto 0";
     elem.src = url.href.replace("media.giphy.com", "media1.giphy.com");
     if (video) {
         elem.autoplay = elem.loop = elem.muted = true;
     }
-    elem.addEventListener((video) ? "canplay" : "load", function() {elem.style.display = "block"})
+    elem.addEventListener((video) ? "canplay" : "load", function() {elem.style.removeProperty("display")})
 }
 
 function setInnerHTMLAndExecuteScript(node, html) {
