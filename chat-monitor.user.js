@@ -55,6 +55,12 @@ class ImageOrVideo {
         switch (url.hostname) {
             case "media.giphy.com":
                 url.hostname = "media1.giphy.com";
+                break;
+            case "i.imgur.com":
+                if (imgurBlocked) {
+                    url.href = "https://proxy.duckduckgo.com/iu/?u=" + url.href;
+                }
+                break;
         }
         return new ImageOrVideo(url);
     }
@@ -254,3 +260,10 @@ waitForElement(CHAT_LIST).then(onChatLoad);
 GM.getResourceText("style").then(GM.addStyle);
 var reminders = GM_getValue("hideRemindersUntil", 0) < Date.now();
 console.debug(`Usage reminders ${(reminders) ? "en" : "dis"}abled`);
+
+async function isImgurBlocked() {
+    // imgur.com and i.imgur.com block cross-origin requests, so new test with api.imgur.com
+    const response = await fetch("https://api.imgur.com/", { method: "HEAD" });
+    return response.status == 403;
+}
+const imgurBlocked = await isImgurBlocked();
