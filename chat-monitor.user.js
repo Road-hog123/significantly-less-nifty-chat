@@ -1,16 +1,14 @@
 // ==UserScript==
-// @name           Significantly Less Nifty Chat
+// @name           Twitch Chat Inliner
 // @namespace      https://roadhog123.co.uk/
 // @description    inlines Images, GIPHY GIFs & YouTube Thumbnails in Twitch chat
 // @match          https://www.twitch.tv/*
 // @version        1.4
-// @updateURL      https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/master/chat-monitor.user.js
-// @downloadURL    https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/master/chat-monitor.user.js
 // @grant          GM_getValue
 // @grant          GM_setValue
 // @grant          GM_addStyle
 // @grant          GM_getResourceText
-// @resource style https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/refs/tags/v1.4/chat-monitor.css
+// @resource style https://github.com/Road-hog123/significantly-less-nifty-chat/raw/dev/chat-monitor.css
 // ==/UserScript==
 
 // matches against a pathname that ends with a image or video file extension
