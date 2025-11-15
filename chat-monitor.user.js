@@ -13,6 +13,9 @@
 // @resource style https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/refs/tags/v1.4/chat-monitor.css
 // ==/UserScript==
 
+var reminders = GM_getValue("hideRemindersUntil", 0) < Date.now();
+console.debug(`Usage reminders ${(reminders) ? "en" : "dis"}abled`);
+
 // matches against a pathname that ends with a image or video file extension
 const RE_DIRECT = /^\/.+\.(?:jpe?g|png|gif|avif|webp|mp4)$/i;
 // matches against a Giphy pathname
@@ -32,6 +35,23 @@ const CHAT_LINK = "a.link-fragment, .seventv-chat-message-body a";
 const DARK_MODE = "tw-root--theme-dark";
 
 const CACHE = new Map();
+
+async function isImgurBlocked() {
+    const cached = sessionStorage.getItem("SLNC_imgurBlocked");
+    if (cached !== null) return cached === "true";
+    // imgur.com and i.imgur.com block cross-origin requests, so new test with api.imgur.com
+    const response = await fetch("https://api.imgur.com/", { method: "HEAD" });
+    const result = response.status == 403;
+    sessionStorage.setItem("SLNC_imgurBlocked", result);
+    return result;
+}
+
+async function proxyImgurURL(url) {
+    if (await isImgurBlocked()) {
+        url.href = "https://proxy.duckduckgo.com/iu/?u=" + url.href;
+    }
+    return url;
+}
 
 class ImageOrVideo {
     constructor(url) {
@@ -57,9 +77,7 @@ class ImageOrVideo {
                 url.hostname = "media1.giphy.com";
                 break;
             case "i.imgur.com":
-                if (imgurBlocked) {
-                    url.href = "https://proxy.duckduckgo.com/iu/?u=" + url.href;
-                }
+                proxyImgurURL(url);
                 break;
         }
         return new ImageOrVideo(url);
@@ -258,12 +276,3 @@ function waitForElement(selector) {
 waitForElement(CHAT_LIST).then(onChatLoad);
 // non-blocking stylesheet injection
 GM.getResourceText("style").then(GM.addStyle);
-var reminders = GM_getValue("hideRemindersUntil", 0) < Date.now();
-console.debug(`Usage reminders ${(reminders) ? "en" : "dis"}abled`);
-
-async function isImgurBlocked() {
-    // imgur.com and i.imgur.com block cross-origin requests, so new test with api.imgur.com
-    const response = await fetch("https://api.imgur.com/", { method: "HEAD" });
-    return response.status == 403;
-}
-const imgurBlocked = await isImgurBlocked();
