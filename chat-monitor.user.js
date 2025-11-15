@@ -18,8 +18,11 @@ console.debug(`Usage reminders ${(reminders) ? "en" : "dis"}abled`);
 
 // matches against a pathname that ends with a image or video file extension
 const RE_DIRECT = /^\/.+\.(?:jpe?g|png|gif|avif|webp|mp4)$/i;
-// matches against a Giphy pathname
+// matches against an imgur image/album/gallery pathname
+// album is truthy when the link is to an album/gallery (collection of multiple images)
 // id is the alphanumeric hash, ignoring the hyphen-separated prefix
+const RE_IMGUR = /^\/(?<album>(?:a|gallery)\/)?(?:\w+-)*(?<id>\w+)$/i;
+// matches against a Giphy pathname, looks like a similar format to imgur
 const RE_GIPHY = /^\/(?:gifs\/)?(?:\w+-)*(?<id>\w+)$/i;
 // matches against youtube.com and youtu.be video links
 // id is base64 video id
@@ -81,6 +84,16 @@ class ImageOrVideo {
                 break;
         }
         return new ImageOrVideo(url);
+    }
+
+    static fromImgurLink(url) {
+        const match = url.pathname.match(RE_IMGUR);
+        if (!match) {
+            console.debug(`imgur.com link '${url.pathname}' did not match regex`);
+            return null;
+        }
+        if (match.groups.album) return null;
+        return new ImageOrVideo(proxyImgurURL(new URL(`https://i.imgur.com/${match.groups.id}.gif`)));
     }
 
     static fromGiphyLink(url) {
@@ -186,6 +199,10 @@ function processNewLink(url) {
     switch (url.hostname) {
         case "imgur.com":
             if (url.pathname.startsWith("/album/")) break;
+            {
+                const result = ImageOrVideo.fromImgurLink(url);
+                if (result) return result;
+            }
         case "gyazo.com":
             if (url.pathname.startsWith("/collections/")) break;
         case "tenor.com":
