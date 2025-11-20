@@ -13,8 +13,19 @@
 // @resource style https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/refs/tags/v1.4/chat-monitor.css
 // ==/UserScript==
 
+// non-blocking stylesheet injection
+GM.getResourceText("style").then(GM.addStyle);
 var reminders = GM_getValue("hideRemindersUntil", 0) < Date.now();
 console.debug(`Usage reminders ${(reminders) ? "en" : "dis"}abled`);
+
+async function isImgurBlocked() {
+    // imgur.com and i.imgur.com block cross-origin requests, so new test with api.imgur.com
+    const response = await fetch("https://api.imgur.com/", { method: "HEAD" });
+    result = !response.ok;
+    console.debug(`api.imgur.com responded with status ${response.status}—imgur is ${result ? "" : "un"}blocked`);
+    return result;
+}
+const imgurBlocked = await isImgurBlocked();
 
 // matches against a pathname that ends with a image or video file extension
 const RE_DIRECT = /^\/.+\.(?:jpe?g|png|gif|avif|webp|mp4)$/i;
@@ -39,18 +50,8 @@ const DARK_MODE = "tw-root--theme-dark";
 
 const CACHE = new Map();
 
-async function isImgurBlocked() {
-    const cached = sessionStorage.getItem("SLNC_imgurBlocked");
-    if (cached !== null) return cached === "true";
-    // imgur.com and i.imgur.com block cross-origin requests, so new test with api.imgur.com
-    const response = await fetch("https://api.imgur.com/", { method: "HEAD" });
-    const result = response.status == 403;
-    sessionStorage.setItem("SLNC_imgurBlocked", result);
-    return result;
-}
-
-async function proxyImgurURL(url) {
-    if (await isImgurBlocked()) {
+function proxyImgurURL(url) {
+    if (imgurBlocked) {
         url.href = "https://proxy.duckduckgo.com/iu/?u=" + url.href;
     }
     return url;
@@ -241,29 +242,37 @@ function processLink(link) {
     return result;
 }
 
-function onAddedNode(node) {
-    // the parent node for our image/video/post
-    const parent = node.querySelector(CHAT_MESSAGE);
-    if (!parent) return; // new node was not a message
+function onMessage(message) {
     // process each link within the message
-    parent.querySelectorAll(CHAT_LINK).forEach(link => {
+    message.querySelectorAll(CHAT_LINK).forEach(link => {
         console.debug(`Detected link '${link.href}' ...`);
         const result = processLink(link);
         if (!result) {
             console.debug("Link was not inlined.");
             return;
         }
-        parent.append(result.getAppendableElement());
+        message.append(result.getAppendableElement());
     });
 }
 
+function onAddedNode(node) {
+    // the parent node for our image/video/post
+    const message = node.querySelector(CHAT_MESSAGE);
+    if (!message) return; // new node was not a message
+    onMessage(message);
+}
+
 function onChatLoad(container) {
+    // chat room might already contain messages
+    console.debug("Inlining any existing chat messages with links...");
+    container.querySelectorAll(CHAT_MESSAGE).forEach(onMessage);
     // monitor chat room for the addition or removal of child nodes (usually messages)
     const observer = new MutationObserver(mutations => {
         mutations.forEach(mutation => {
             mutation.addedNodes.forEach(onAddedNode);
         });
     });
+    console.debug("Monitoring for new chat messages with links...");
     observer.observe(container, {childList: true});
 }
 
@@ -289,7 +298,4 @@ function waitForElement(selector) {
     });
 }
 
-// we want to start observing for the chat list as early as possible so we don't miss it
 waitForElement(CHAT_LIST).then(onChatLoad);
-// non-blocking stylesheet injection
-GM.getResourceText("style").then(GM.addStyle);
