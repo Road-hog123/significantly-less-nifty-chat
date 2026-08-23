@@ -19,9 +19,13 @@ var reminders = GM_getValue("hideRemindersUntil", 0) < Date.now();
 console.debug(`Usage reminders ${(reminders) ? "en" : "dis"}abled`);
 
 async function isImgurBlocked() {
-    // imgur.com and i.imgur.com block cross-origin requests, so new test with api.imgur.com
-    const response = await fetch("https://api.imgur.com/", { method: "HEAD" });
-    result = !response.ok;
+/* imgur is blocked in the UK;
+   images are replaced with "content not available" image which takes up lots of space in chat.
+   imgur.com and i.imgur.com block cross-origin requests,
+   api.imgur.com root redirects to apidocs.imgur.com (not blocked in the UK) resulting in CORS fail.
+   full api url without auth token responds 401, or 403 if blocked. */
+    const response = await fetch("https://api.imgur.com/3/gallery.json", { method: "HEAD" });
+    const result = response.status == 403;
     console.debug(`api.imgur.com responded with status ${response.status}—imgur is ${result ? "" : "un"}blocked`);
     return result;
 }
