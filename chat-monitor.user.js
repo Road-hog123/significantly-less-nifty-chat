@@ -70,7 +70,7 @@ class ImageOrVideo {
     getAppendableElement() {
         const element = document.createElement(this.video ? "video" : "img");
         element.style.display = "none";
-        element.addEventListener(this.video ? "canplay" : "load", () => element.style.display = "");
+        element.addEventListener(this.video ? "canplay" : "load", () => {element.style.display = ""});
         element.src = this.url.href;
         if (this.video) {
             element.autoplay = element.loop = element.muted = true;
@@ -208,8 +208,10 @@ function processNewLink(url) {
                 const result = ImageOrVideo.fromImgurLink(url);
                 if (result) return result;
             }
+            // falls through to Reminder
         case "gyazo.com":
             if (url.pathname.startsWith("/collections/")) break;
+            // falls through to Reminder
         case "tenor.com":
             return new Reminder();
         case "giphy.com":
