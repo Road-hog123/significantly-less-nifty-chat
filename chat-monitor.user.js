@@ -9,6 +9,7 @@
 // @downloadURL    https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/master/chat-monitor.user.js
 // @grant          GM_getValue
 // @grant          GM_setValue
+// @grant          GM_deleteValue
 // @grant          GM_addStyle
 // @grant          GM_getResourceText
 // @grant          window.onurlchange
@@ -17,8 +18,16 @@
 
 // non-blocking stylesheet injection
 GM.getResourceText("style").then(GM.addStyle);
-var reminders = GM_getValue("hideRemindersUntil", 0) < Date.now();
-console.debug(`Usage reminders ${(reminders) ? "en" : "dis"}abled`);
+
+const EVENT = "DBEx2026";
+// userscript storage keys
+const K_REMINDERS = "hideReminders";
+const K_REMINDERS_OLD = "hideRemindersUntil";
+// update from previous userscript storage location
+if (GM_getValue(K_REMINDERS_OLD, 0) > Date.now()) {
+    GM_setValue(K_REMINDERS, EVENT);
+    GM_deleteValue(K_REMINDERS_OLD);
+}
 
 // pages where the script should not look for a chat container
 const EXCLUDED_PATH_SEGMENTS = new Map([
@@ -96,6 +105,7 @@ const CACHE = new Map();
 
 let location;
 let container;
+let reminder;
 
 function proxyImgurURL(url) {
     if (IMGUR_BLOCKED) {
@@ -140,7 +150,7 @@ class ImageOrVideo {
             console.debug(`imgur.com link '${url.pathname}' did not match regex`);
             return null;
         }
-        if (match.groups.album) return null;
+        if (match.groups.album) return reminder;
         return new ImageOrVideo(proxyImgurURL(new URL(`https://i.imgur.com/${match.groups.id}.gif`)));
     }
 
@@ -204,18 +214,23 @@ class Tweet {
 
 class Reminder {
     static dismissReminders() {
-        reminders = false;
+        // prevent new links from creating reminders
+        reminder = null;
+        // prevent cached links from inlining reminders
+        CACHE.forEach((value, key) => {
+            if (value instanceof Reminder) CACHE.set(key, null);
+        });
+        // remove any existing reminders
         container.querySelectorAll("div.notice").forEach(notice => notice.remove());
     }
 
     static hideReminders() {
         Reminder.dismissReminders();
-        // approximately 359 days in the future
-        GM_setValue("hideRemindersUntil", Date.now() + 31000000000);
+        // prevent reminders from showing after a reload
+        GM_setValue(K_REMINDERS, EVENT);
     }
 
     getAppendableElement() {
-        if (!reminders) return null;
         const notice = document.createElement("div");
         notice.className = "notice";
         const message = document.createElement("i");
@@ -228,7 +243,7 @@ class Reminder {
         dismiss.textContent = "Dismiss";
         dismiss.addEventListener("click", Reminder.dismissReminders);
         const hide = document.createElement("button");
-        hide.textContent = "Hide for 1 year";
+        hide.textContent = "Hide until next DB";
         hide.addEventListener("click", Reminder.hideReminders);
         dismiss.type = hide.type = "button";
         const buttons = document.createElement("div");
@@ -247,16 +262,12 @@ function processNewLink(url) {
     switch (url.hostname) {
         case "imgur.com":
             if (url.pathname.startsWith("/album/")) break;
-            {
-                const result = ImageOrVideo.fromImgurLink(url);
-                if (result) return result;
-            }
-            // falls through to Reminder
+            return ImageOrVideo.fromImgurLink(url);
         case "gyazo.com":
             if (url.pathname.startsWith("/collections/")) break;
-            // falls through to Reminder
+            return reminder;
         case "tenor.com":
-            return new Reminder();
+            return reminder;
         case "giphy.com":
             return ImageOrVideo.fromGiphyLink(url);
         case "youtu.be":
@@ -345,6 +356,9 @@ function onLocationChange() {
     }
     waitForChat();
 }
+
+if (GM_getValue(K_REMINDERS, "") !== EVENT) reminder = new Reminder();
+console.info(`Usage reminders ${reminder ? "en" : "dis"}abled`);
 onLocationChange();
 
 if ("navigation" in window) {
