@@ -18,19 +18,6 @@ GM.getResourceText("style").then(GM.addStyle);
 var reminders = GM_getValue("hideRemindersUntil", 0) < Date.now();
 console.debug(`Usage reminders ${(reminders) ? "en" : "dis"}abled`);
 
-async function isImgurBlocked() {
-/* imgur is blocked in the UK;
-   images are replaced with "content not available" image which takes up lots of space in chat.
-   imgur.com and i.imgur.com block cross-origin requests,
-   api.imgur.com root redirects to apidocs.imgur.com (not blocked in the UK) resulting in CORS fail.
-   full api url without auth token responds 401, or 403 if blocked. */
-    const response = await fetch("https://api.imgur.com/3/gallery.json", { method: "HEAD" });
-    const result = response.status == 403;
-    console.debug(`api.imgur.com responded with status ${response.status}—imgur is ${result ? "" : "un"}blocked`);
-    return result;
-}
-const imgurBlocked = await isImgurBlocked();
-
 // matches against a pathname that ends with a image or video file extension
 const RE_DIRECT = /^\/.+\.(?:jpe?g|png|gif|avif|webp|mp4)$/i;
 // matches against an imgur image/album/gallery pathname
@@ -52,10 +39,27 @@ const CHAT_LINK = "a.link-fragment";
 const CHAT_MESSAGE = `.chat-line__message-container:has(${CHAT_LINK})`;
 const DARK_MODE = "tw-root--theme-dark";
 
+// imgur is blocked in the UK; images are replaced with a "Content not viewable
+// in your region" image which takes up lots of space in chat. Tests against
+// imgur.com, i.imgur.com and invalid API URLs fail due to CORS issues, but a
+// valid API URL without an auth token gets a 401 response, or 403 if blocked.
+const IMGUR_TEST = new URL("https://api.imgur.com/3/gallery.json");
+const IMGUR_BLOCKED = await fetch(IMGUR_TEST, { method: "HEAD" }).then(
+    response => {
+        console.debug(`imgur responded with status ${response.status}`);
+        return response.status === 403;
+    },
+    error => {
+        console.error(`imgur block test failed: ${error}`);
+        return true;
+    },
+);
+console.info(`imgur is ${IMGUR_BLOCKED ? "" : "un"}blocked`);
+
 const CACHE = new Map();
 
 function proxyImgurURL(url) {
-    if (imgurBlocked) {
+    if (IMGUR_BLOCKED) {
         url.href = "https://proxy.duckduckgo.com/iu/?u=" + url.href;
     }
     return url;
