@@ -107,15 +107,12 @@ let location;
 let container;
 let reminder;
 
-function proxyImgurURL(url) {
-    if (IMGUR_BLOCKED) {
-        url.href = "https://proxy.duckduckgo.com/iu/?u=" + url.href;
-    }
-    return url;
-}
-
 class ImageOrVideo {
     constructor(url) {
+        if (url.hostname === "media.giphy.com") url.hostname = "media1.giphy.com";
+        else if (url.hostname === "i.imgur.com" && IMGUR_BLOCKED) {
+            url.href = `https://proxy.duckduckgo.com/iu/?u=${url.href}`;
+        }
         this.url = url;
         this.video = url.pathname.endsWith("mp4");
     }
@@ -132,18 +129,6 @@ class ImageOrVideo {
         return element;
     }
 
-    static fromDirectLink(url) {
-        switch (url.hostname) {
-            case "media.giphy.com":
-                url.hostname = "media1.giphy.com";
-                break;
-            case "i.imgur.com":
-                proxyImgurURL(url);
-                break;
-        }
-        return new ImageOrVideo(url);
-    }
-
     static fromImgurLink(url) {
         const match = url.pathname.match(RE_IMGUR);
         if (!match) {
@@ -151,7 +136,7 @@ class ImageOrVideo {
             return null;
         }
         if (match.groups.album) return reminder;
-        return new ImageOrVideo(proxyImgurURL(new URL(`https://i.imgur.com/${match.groups.id}.gif`)));
+        return new ImageOrVideo(new URL(`https://i.imgur.com/${match.groups.id}.gif`));
     }
 
     static fromGiphyLink(url) {
@@ -248,9 +233,7 @@ class Reminder {
 
 function processNewLink(url) {
     // if the pathname ends with an image/video file extension then it can be inlined without special treatment
-    if (url.pathname.match(RE_DIRECT)) {
-        return ImageOrVideo.fromDirectLink(url);
-    }
+    if (RE_DIRECT.test(url.pathname)) return new ImageOrVideo(url);
     // not sure if this is the best solution, but direct string matching seems better than regex?
     switch (url.hostname) {
         case "imgur.com":
