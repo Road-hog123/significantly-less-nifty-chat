@@ -173,33 +173,26 @@ class ImageOrVideo {
     }
 }
 
-// https://stackoverflow.com/a/47614491
-function setInnerHTMLAndExecuteScript(node, html) {
-    node.innerHTML = html;
-    Array.from(node.querySelectorAll("script"))
-        .forEach( oldScriptElement => {
-            const newScriptElement = document.createElement("script");
-            Array.from(oldScriptElement.attributes).forEach( attr => {
-                newScriptElement.setAttribute(attr.name, attr.value)
-            });
-            const scriptText = document.createTextNode(oldScriptElement.innerHTML);
-            newScriptElement.appendChild(scriptText);
-            oldScriptElement.parentNode.replaceChild(newScriptElement, oldScriptElement);
-    });
-}
-
 class Tweet {
     constructor(url) {
         this.url = url;
     }
 
     getAppendableElement() {
-        const darkmode = document.documentElement.classList.contains(DARK_MODE);
-        const element = document.createElement("div");
-        const innerHTML = `<blockquote data-conversation="none" data-dnt="true" ${darkmode ? 'data-theme="dark"' : ''} class="twitter-tweet"><a href="${this.url.href}"></a><script src="https://platform.twitter.com/widgets.js" charset="utf-8"></script></blockquote>`;
-        setInnerHTMLAndExecuteScript(element, innerHTML);
+        const blockquote = document.createElement("blockquote");
+        blockquote.className = "twitter-tweet";
+        blockquote.setAttribute("data-conversation", "none");
+        blockquote.setAttribute("data-dnt", "true");
+        if (document.documentElement.classList.contains(DARK_MODE)) {
+            blockquote.setAttribute("data-theme", "dark");
+        }
+        const a = document.createElement("a");
+        a.href = this.url.href;
+        const script = document.createElement("script");
+        script.src = "https://platform.twitter.com/widgets.js";
+        blockquote.append(a, script);
         console.debug(`Inlining tweet with url '${this.url.href}'`);
-        return element;
+        return blockquote;
     }
 
     static fromTweetLink(url) {

@@ -7,6 +7,10 @@
     margin: .25em auto 0;
 }
 
+.twitter-tweet {
+    margin: auto;
+}
+
 .notice, .notice button {
     border: thin solid #777;
     border-radius: .5em;
