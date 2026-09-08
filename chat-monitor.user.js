@@ -2,7 +2,8 @@
 // @name           Significantly Less Nifty Chat
 // @namespace      https://roadhog123.co.uk/
 // @description    inlines Images, GIPHY GIFs & YouTube Thumbnails in Twitch chat
-// @match          https://www.twitch.tv/*
+// @match          *://www.twitch.tv/*
+// @match          *://m.twitch.tv/*
 // @version        1.8
 // @updateURL      https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/master/chat-monitor.user.js
 // @downloadURL    https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/master/chat-monitor.user.js
@@ -10,6 +11,7 @@
 // @grant          GM_setValue
 // @grant          GM_addStyle
 // @grant          GM_getResourceText
+// @grant          window.onurlchange
 // @resource style https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/refs/tags/v1.4/chat-monitor.css
 // ==/UserScript==
 
@@ -17,6 +19,40 @@
 GM.getResourceText("style").then(GM.addStyle);
 var reminders = GM_getValue("hideRemindersUntil", 0) < Date.now();
 console.debug(`Usage reminders ${(reminders) ? "en" : "dis"}abled`);
+
+// pages where the script should not look for a chat container
+const EXCLUDED_PATH_SEGMENTS = new Map([
+    // zeroth item is empty string before first path separator
+    [
+        1,
+        new Set([
+            "",
+            "activity",
+            "directory",
+            "downloads",
+            "drops",
+            "inventory",
+            "jobs",
+            "p",
+            "privacy",
+            "settings",
+            "subscriptions",
+            "team",
+            "turbo",
+            "videos",
+            "wallet",
+        ]),
+    ],
+    [2, new Set(["clip"])],
+    [-1, new Set(["about", "clips", "home", "schedule", "videos"])],
+]);
+function hasChat() {
+    const path_segments = window.location.pathname.split("/");
+    for (const [index, values] of EXCLUDED_PATH_SEGMENTS) {
+        if (values.has(path_segments.at(index))) return false;
+    }
+    return true;
+}
 
 // matches against a pathname that ends with a image or video file extension
 const RE_DIRECT = /^\/.+\.(?:jpe?g|png|gif|avif|webp|mp4)$/i;
@@ -34,7 +70,7 @@ const RE_YOUTUBE = /(?:youtu\.be\/|youtube\.com\/watch\?v=)(?<id>[\w-]+)/i;
 // id is unsigned integer (64 bit, so must be handled as string)
 const RE_TWITTER = /^\/(?<user>\w{4,15})\/status\/(?<id>\d+)$/i;
 
-const CHAT_LIST = ".chat-scrollable-area__message-container";
+const CHAT = ".chat-scrollable-area__message-container";
 const CHAT_LINK = "a.link-fragment";
 const CHAT_MESSAGE = `.chat-line__message-container:has(${CHAT_LINK})`;
 const DARK_MODE = "tw-root--theme-dark";
@@ -57,6 +93,9 @@ const IMGUR_BLOCKED = await fetch(IMGUR_TEST, { method: "HEAD" }).then(
 console.info(`imgur is ${IMGUR_BLOCKED ? "" : "un"}blocked`);
 
 const CACHE = new Map();
+
+let location;
+let container;
 
 function proxyImgurURL(url) {
     if (IMGUR_BLOCKED) {
@@ -166,7 +205,7 @@ class Tweet {
 class Reminder {
     static dismissReminders() {
         reminders = false;
-        document.querySelectorAll("div.notice").forEach(notice => notice.remove());
+        container.querySelectorAll("div.notice").forEach(notice => notice.remove());
     }
 
     static hideReminders() {
@@ -265,47 +304,62 @@ function onMessage(message) {
     });
 }
 
-function onAddedNode(node) {
-    // the parent node for our image/video/post
-    const message = node.querySelector(CHAT_MESSAGE);
-    if (!message) return; // new node was not a message
-    onMessage(message);
-}
+// Observer that watches for new chat messages
+const MESSAGE_OBSERVER = new MutationObserver(mutations => {
+    mutations.forEach(mutation => {
+        mutation.addedNodes.forEach(node => {
+            const message = node.querySelector?.(CHAT_MESSAGE);
+            if (message) onMessage(message);
+        });
+    });
+});
 
-function onChatLoad(container) {
-    // chat room might already contain messages
+function onChatLoad(element) {
+    container = element;
     console.debug("Inlining any existing chat messages with links...");
     container.querySelectorAll(CHAT_MESSAGE).forEach(onMessage);
-    // monitor chat room for the addition or removal of child nodes (usually messages)
-    const observer = new MutationObserver(mutations => {
-        mutations.forEach(mutation => {
-            mutation.addedNodes.forEach(onAddedNode);
-        });
-    });
     console.debug("Monitoring for new chat messages with links...");
-    observer.observe(container, {childList: true});
+    MESSAGE_OBSERVER.observe(container, { childList: true });
 }
 
-function waitForElement(selector) {
-    return new Promise(resolve => {
-        // if life were simple the chat window would exist when the script runs...
-        const element = document.querySelector(selector);
-        if (element) {
-            return resolve(element);
-        }
-        // but chances are we'll have to watch the whole document tree,
-        // waiting for an element to be modified into a form we can recognise as "chat window"...
-        // (no, the element is not *added* in a form we can recognise, the class is added later...)
-        const observer = new MutationObserver(mutations => {
-            mutations.some(mutation => {
-                if (mutation.target.matches?.(selector)) {
-                    observer.disconnect();
-                    return resolve(mutation.target);
-                }
-            })
-        });
-        observer.observe(document.body, {childList: true, subtree: true});
+// Observer that watches for a recognisable chat container
+const CONTAINER_OBSERVER = new MutationObserver(mutations => {
+    mutations.some(mutation => {
+        if (!mutation.target.matches?.(CHAT)) return false;
+        CONTAINER_OBSERVER.disconnect();
+        onChatLoad(mutation.target);
+        return true;
     });
+});
+function waitForChat() {
+    console.debug("Waiting for a chat window...");
+    CONTAINER_OBSERVER.observe(document.body, { childList: true, subtree: true });
 }
 
-waitForElement(CHAT_LIST).then(onChatLoad);
+function onLocationChange() {
+    const newLocation = window.location.pathname;
+    // disregard spurious location changes, changes to anchor/query, etc.
+    if (newLocation === location) return;
+    console.debug(`Navigated${location ? ` from ${location}` : ""} to ${newLocation}`);
+    location = newLocation;
+
+    CONTAINER_OBSERVER.disconnect();
+    // ignore pages without chat
+    if (!hasChat()) return;
+    // try to find an existing chat window
+    const chat = document.querySelector(CHAT);
+    if (chat) {
+        if (chat === container) return; // already observing this chat window
+        return onChatLoad(chat);
+    }
+    waitForChat();
+}
+onLocationChange();
+
+if ("navigation" in window) {
+    // Navigation API is supported
+    navigation.addEventListener("navigatesuccess", onLocationChange);
+} else if (window.onurlchange === null) {
+    // User Script API supports window.onurlchange
+    window.addEventListener("urlchange", onLocationChange);
+}
