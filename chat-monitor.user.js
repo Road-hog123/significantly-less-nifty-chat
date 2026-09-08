@@ -108,24 +108,26 @@ let container;
 let reminder;
 
 class ImageOrVideo {
+    #url;
     constructor(url) {
         if (url.hostname === "media.giphy.com") url.hostname = "media1.giphy.com";
         else if (url.hostname === "i.imgur.com" && IMGUR_BLOCKED) {
-            url.href = `https://proxy.duckduckgo.com/iu/?u=${url.href}`;
+            url.href = `https://proxy.duckduckgo.com/iu/?u=${url}`;
         }
-        this.url = url;
-        this.video = url.pathname.endsWith("mp4");
+        this.#url = url;
     }
 
     getAppendableElement() {
-        const element = document.createElement(this.video ? "video" : "img");
+        const video = this.#url.pathname.endsWith("mp4");
+        const element = document.createElement(video ? "video" : "img");
         element.style.display = "none";
-        element.addEventListener(this.video ? "canplay" : "load", () => {element.style.display = ""});
-        element.src = this.url.href;
-        if (this.video) {
+        const show = () => element.removeAttribute("style");
+        element.addEventListener(video ? "canplay" : "load", show, { once: true });
+        element.src = this.#url;
+        if (video) {
             element.autoplay = element.loop = element.muted = true;
         }
-        console.debug(`Inlining ${(this.video) ? "video" : "image"} with url '${element.src}'`);
+        console.debug(`Inlining ${video ? "video" : "image"} with url '${this.#url}'`);
         return element;
     }
 
@@ -151,7 +153,7 @@ class ImageOrVideo {
     static fromYouTubeLink(url) {
         const match = url.href.match(RE_YOUTUBE);
         if (!match) {
-            console.debug(`youtube link '${url.href}' did not match regex`);
+            console.debug(`youtube link '${url}' did not match regex`);
             return null;
         }
         return new ImageOrVideo(new URL(`https://img.youtube.com/vi/${match.groups.id}/mqdefault.jpg`));
@@ -159,8 +161,9 @@ class ImageOrVideo {
 }
 
 class Tweet {
+    #url;
     constructor(url) {
-        this.url = url;
+        this.#url = url;
     }
 
     getAppendableElement() {
@@ -172,11 +175,11 @@ class Tweet {
             blockquote.setAttribute("data-theme", "dark");
         }
         const a = document.createElement("a");
-        a.href = this.url.href;
+        a.href = this.#url;
         const script = document.createElement("script");
         script.src = "https://platform.twitter.com/widgets.js";
         blockquote.append(a, script);
-        console.debug(`Inlining tweet with url '${this.url.href}'`);
+        console.debug(`Inlining tweet with url '${this.#url}'`);
         return blockquote;
     }
 
@@ -191,7 +194,7 @@ class Tweet {
 }
 
 class Reminder {
-    static dismissReminders() {
+    static #dismissReminders() {
         // prevent new links from creating reminders
         reminder = null;
         // prevent cached links from inlining reminders
@@ -202,8 +205,8 @@ class Reminder {
         container.querySelectorAll("div.notice").forEach(notice => notice.remove());
     }
 
-    static hideReminders() {
-        Reminder.dismissReminders();
+    static #hideReminders() {
+        Reminder.#dismissReminders();
         // prevent reminders from showing after a reload
         GM_setValue(K_REMINDERS, EVENT);
     }
@@ -219,10 +222,10 @@ class Reminder {
         );
         const dismiss = document.createElement("button");
         dismiss.textContent = "Dismiss";
-        dismiss.addEventListener("click", Reminder.dismissReminders);
+        dismiss.addEventListener("click", Reminder.#dismissReminders);
         const hide = document.createElement("button");
         hide.textContent = "Hide until next DB";
-        hide.addEventListener("click", Reminder.hideReminders);
+        hide.addEventListener("click", Reminder.#hideReminders);
         dismiss.type = hide.type = "button";
         const buttons = document.createElement("div");
         buttons.append(dismiss, hide);
