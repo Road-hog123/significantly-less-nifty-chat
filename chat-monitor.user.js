@@ -78,7 +78,7 @@ const RE_YOUTUBE = /(?:youtu\.be\/|youtube\.com\/watch\?v=)(?<id>[\w-]+)/i;
 // matches against twitter/x pathname
 // user is alphanumeric (and underscores) between 4 and 15 characters
 // id is unsigned integer (64 bit, so must be handled as string)
-const RE_TWITTER = /^\/(?<user>\w{4,15})\/status\/(?<id>\d+)$/i;
+const RE_TWITTER = /^\/\w{4,15}\/status\/\d+$/i;
 
 const CHAT = ".chat-scrollable-area__message-container";
 const CHAT_LINK = "a.link-fragment";
@@ -197,12 +197,9 @@ class Tweet {
     }
 
     static fromTweetLink(url) {
-        const match = url.pathname.match(RE_TWITTER);
-        if (!match) {
-            console.debug(`twitter link '${url.pathname}' did not match regex`);
-            return null;
-        }
-        return new Tweet(new URL(`https://twitter.com/${match.groups.user}/status/${match.groups.id}`));
+        if (RE_TWITTER.test(url.pathname)) return new Tweet(url.pathname);
+        console.debug(`twitter link '${url.pathname}' did not match regex`);
+        return null;
     }
 }
 
@@ -248,10 +245,8 @@ class Reminder {
 }
 
 function processNewLink(url) {
-    // if the pathname ends with an image/video file extension then it can be inlined without special treatment
-    if (url.pathname.match(RE_DIRECT)) {
-        return ImageOrVideo.fromDirectLink(url);
-    }
+    // direct links to images can usually be inlined without special treatment
+    if (RE_DIRECT.test(url.pathname)) return ImageOrVideo.fromDirectLink(url);
     // not sure if this is the best solution, but direct string matching seems better than regex?
     switch (url.hostname) {
         case "imgur.com":
