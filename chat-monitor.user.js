@@ -272,13 +272,9 @@ function processNewLink(url) {
 }
 
 function processLink(link) {
-    let url;
-    try {
-        url = new URL(link.href);
-    } catch {
-        console.debug("URL could not be parsed!");
-        return null;
-    }
+    console.debug(`Detected link '${link.href}'`);
+    if (!URL.canParse(link.href)) return null;
+    const url = new URL(link.href);
     // ignore scheme, port, username/password and hash
     const key = url.hostname + url.pathname + url.search;
     const cached = CACHE.get(key);
@@ -294,13 +290,8 @@ function processLink(link) {
 function onMessage(message) {
     // process each link within the message
     message.querySelectorAll(CHAT_LINK).forEach(link => {
-        console.debug(`Detected link '${link.href}' ...`);
-        const result = processLink(link);
-        if (!result) {
-            console.debug("Link was not inlined.");
-            return;
-        }
-        message.append(result.getAppendableElement());
+        const element = processLink(link)?.getAppendableElement();
+        if (element) message.append(element);
     });
 }
 
