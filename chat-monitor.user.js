@@ -48,8 +48,8 @@ const RE_YOUTUBE = /(?:youtu\.be\/|youtube\.com\/watch\?v=)(?<id>[\w-]+)/i;
 const RE_TWITTER = /^\/(?<user>\w{4,15})\/status\/(?<id>\d+)$/i;
 
 const CHAT_LIST = ".chat-scrollable-area__message-container";
-const CHAT_MESSAGE = ".chat-line__message-container";
 const CHAT_LINK = "a.link-fragment";
+const CHAT_MESSAGE = `.chat-line__message-container:has(${CHAT_LINK})`;
 const DARK_MODE = "tw-root--theme-dark";
 
 const CACHE = new Map();
