@@ -108,15 +108,11 @@ let location;
 let container;
 let reminder;
 
-function proxyImgurURL(url) {
-    if (IMGUR_BLOCKED) {
-        url.href = "https://proxy.duckduckgo.com/iu/?u=" + url.href;
-    }
-    return url;
-}
-
 class ImageOrVideo {
     constructor(url) {
+        if (url.hostname === "i.imgur.com" && IMGUR_BLOCKED) {
+            url.href = `https://proxy.duckduckgo.com/iu/?u=${url.href}`;
+        }
         this.url = url;
         this.video = url.pathname.endsWith("mp4");
     }
@@ -134,14 +130,7 @@ class ImageOrVideo {
     }
 
     static fromDirectLink(url) {
-        switch (url.hostname) {
-            case "media.giphy.com":
-                url.hostname = "media1.giphy.com";
-                break;
-            case "i.imgur.com":
-                proxyImgurURL(url);
-                break;
-        }
+        if (url.hostname === "media.giphy.com") url.hostname = "media1.giphy.com";
         return new ImageOrVideo(url);
     }
 
@@ -152,7 +141,7 @@ class ImageOrVideo {
             return null;
         }
         if (match.groups.album) return reminder;
-        return new ImageOrVideo(proxyImgurURL(new URL(`https://i.imgur.com/${match.groups.id}.gif`)));
+        return new ImageOrVideo(new URL(`https://i.imgur.com/${match.groups.id}.gif`));
     }
 
     static fromGiphyLink(url) {
