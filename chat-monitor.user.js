@@ -71,9 +71,10 @@ const RE_DIRECT = /^\/.+\.(?:jpe?g|png|gif|avif|webp|mp4)$/i;
 const RE_IMGUR = /^\/(?<album>(?:a|gallery)\/)?(?:\w+-)*(?<id>\w+)$/i;
 // matches against a Giphy pathname, looks like a similar format to imgur
 const RE_GIPHY = /^\/(?:gifs\/)?(?:\w+-)*(?<id>\w+)$/i;
-// matches against youtube.com and youtu.be video links
-// id is base64 video id
-const RE_YOUTUBE = /(?:youtu\.be\/|youtube\.com\/watch\?v=)(?<id>[\w-]+)/i;
+// matches against youtube.com pathnames that contain video IDs
+const RE_YOUTUBE = /^\/(?:e|embed|live|shorts|v|watch)\/[\w-]+$/i;
+// matches against YouTube video IDs (base64 representation of 64-bit integer)
+const RE_YOUTUBE_ID = /^[\w-]{11}$/i;
 // matches against twitter/x pathname
 // user is alphanumeric (and underscores) between 4 and 15 characters
 // id is unsigned integer (64 bit, so must be handled as string)
@@ -151,12 +152,16 @@ class ImageOrVideo {
     }
 
     static fromYouTubeLink(url) {
-        const match = url.href.match(RE_YOUTUBE);
-        if (!match) {
-            console.debug(`youtube link '${url}' did not match regex`);
+        let id = null;
+        if (url.hostname === "youtu.be") id = url.pathname.replace("/", "");
+        else if (url.pathname === "/watch") id = url.searchParams.get("v");
+        else if (RE_YOUTUBE.test(url.pathname)) id = url.pathname.split("/").at(-1);
+
+        if (!RE_YOUTUBE_ID.test(id)) {
+            console.debug(`youtube link '${url}' was not a video link`);
             return null;
         }
-        return new ImageOrVideo(new URL(`https://img.youtube.com/vi/${match.groups.id}/mqdefault.jpg`));
+        return new ImageOrVideo(new URL(`https://img.youtube.com/vi/${id}/mqdefault.jpg`));
     }
 }
 
@@ -251,8 +256,9 @@ function processNewLink(url) {
             return ImageOrVideo.fromGiphyLink(url);
         case "youtu.be":
         case "youtube.com":
-        case "www.youtu.be":
+        case "m.youtube.com":
         case "www.youtube.com":
+        case "music.youtube.com":
             return ImageOrVideo.fromYouTubeLink(url);
         case "x.com":
         case "twitter.com":
