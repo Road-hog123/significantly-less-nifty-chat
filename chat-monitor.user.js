@@ -153,7 +153,7 @@ class ImageOrVideo {
             console.debug(`giphy.com link '${url.pathname}' did not match regex`);
             return null;
         }
-        return new ImageOrVideo(new URL(`https://media1.giphy.com/media/${match.groups.id}/giphy.gif`));
+        return new ImageOrVideo(new URL(`https://i.giphy.com/${match.groups.id}.webp`));
     }
 
     static fromYouTubeLink(url) {
