@@ -71,6 +71,8 @@ const RE_DIRECT = /^\/.+\.(?:jpe?g|png|gif|avif|webp|mp4)$/i;
 const RE_IMGUR = /^\/(?<album>(?:a|gallery)\/)?(?:\w+-)*(?<id>\w+)$/i;
 // matches against a Giphy pathname, looks like a similar format to imgur
 const RE_GIPHY = /^\/(?:gifs\/)?(?:\w+-)*(?<id>\w+)$/i;
+// matches against a Gyazo pathname, id is hex
+const RE_GYAZO = /^\/(?<id>[\da-f]+)$/i;
 // matches against youtube.com pathnames that contain video IDs
 const RE_YOUTUBE = /^\/(?:e|embed|live|shorts|v|watch)\/[\w-]+$/i;
 // matches against YouTube video IDs (base64 representation of 64-bit integer)
@@ -148,6 +150,15 @@ class ImageOrVideo {
             return null;
         }
         return new ImageOrVideo(new URL(`https://i.giphy.com/${match.groups.id}.webp`));
+    }
+
+    static fromGyazoLink(url) {
+        const match = url.pathname.match(RE_GYAZO);
+        if (!match) {
+            console.debug(`gyazo.com link '${url.pathname}' did not match regex`);
+            return null;
+        }
+        return new ImageOrVideo(new URL(`https://i.gyazo.com/${match.groups.id}.gif`));
     }
 
     static fromYouTubeLink(url) {
@@ -248,7 +259,7 @@ function processNewLink(url) {
             return ImageOrVideo.fromImgurLink(url);
         case "gyazo.com":
             if (url.pathname.startsWith("/collections/")) break;
-            return reminder;
+            return ImageOrVideo.fromGyazoLink(url);
         case "tenor.com":
             return reminder;
         case "giphy.com":
