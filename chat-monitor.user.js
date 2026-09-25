@@ -133,7 +133,6 @@ class ImageOrVideo {
     }
 
     static fromDirectLink(url) {
-        if (url.hostname === "media.giphy.com") url.hostname = "media1.giphy.com";
         return new ImageOrVideo(url);
     }
 
