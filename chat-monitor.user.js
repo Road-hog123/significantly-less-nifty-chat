@@ -111,8 +111,7 @@ let reminder;
 class ImageOrVideo {
     #url;
     constructor(url) {
-        if (url.hostname === "media.giphy.com") url.hostname = "media1.giphy.com";
-        else if (url.hostname === "i.imgur.com" && IMGUR_BLOCKED) {
+        if (url.hostname === "i.imgur.com" && IMGUR_BLOCKED) {
             url.href = `https://proxy.duckduckgo.com/iu/?u=${url}`;
         }
         this.#url = url;
@@ -148,7 +147,7 @@ class ImageOrVideo {
             console.debug(`giphy.com link '${url.pathname}' did not match regex`);
             return null;
         }
-        return new ImageOrVideo(new URL(`https://media1.giphy.com/media/${match.groups.id}/giphy.gif`));
+        return new ImageOrVideo(new URL(`https://i.giphy.com/${match.groups.id}.webp`));
     }
 
     static fromYouTubeLink(url) {
