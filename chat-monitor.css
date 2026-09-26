@@ -1,42 +1,45 @@
-.chat-line__message-container > img,
-.chat-line__message-container > video,
-.chat-line__message-container > .notice {
-    display: block;
-    max-width: 100%;
-    max-height: 50vh;
-    margin: .25em auto 0;
-}
+.chat-line__message-container {
+    & > img,
+    & > video,
+    .notice {
+        display: block;
+        max-width: 100%;
+        max-height: 50vh;
+        margin: .25em auto 0;
+    }
 
-.twitter-tweet {
-    margin: auto;
-}
+    .twitter-tweet {
+        margin: auto;
+    }
 
-.notice, .notice button {
-    border: thin solid #777;
-    border-radius: .5em;
-}
+    .notice,
+    .notice button {
+        border: thin solid #777;
+        border-radius: .5em;
+    }
 
-.notice {
-    width: fit-content;
-    padding: .3em .5em;
-    text-align: center;
-}
+    .notice {
+        width: fit-content;
+        padding: .3em .5em;
+        text-align: center;
 
-.notice i {
-    font-style: italic;
-}
+        i {
+            font-style: italic;
+        }
 
-.notice div {
-    display: flex;
-    justify-content: space-evenly;
-    margin-block-start: .25em;
-}
+        div {
+            display: flex;
+            justify-content: space-evenly;
+            margin-block-start: .25em;
+        }
 
-.notice button {
-    padding-inline: .3em;
-}
+        button {
+            padding-inline: .3em;
 
-.notice button:hover {
-    background-color: rgb(255 255 255 / .1);
-    border-color: #aaa;
+            &:hover {
+                background-color: rgb(255 255 255 / .1);
+                border-color: #aaa;
+            }
+        }
+    }
 }
