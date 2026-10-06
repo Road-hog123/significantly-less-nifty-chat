@@ -133,6 +133,8 @@ class ImageOrVideo {
     }
 
     static fromDirectLink(url) {
+        // tenor short links end .gif but aren't actual images :(
+        if (url.hostname === "tenor.com") return reminder;
         return new ImageOrVideo(url);
     }
 
