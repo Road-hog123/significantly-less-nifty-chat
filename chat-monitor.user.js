@@ -4,7 +4,7 @@
 // @description    inlines Images, GIPHY GIFs & YouTube Thumbnails in Twitch chat
 // @match          *://www.twitch.tv/*
 // @match          *://m.twitch.tv/*
-// @version        1.8
+// @version        1.9
 // @updateURL      https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/master/chat-monitor.user.js
 // @downloadURL    https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/master/chat-monitor.user.js
 // @grant          GM_getValue
@@ -13,13 +13,13 @@
 // @grant          GM_addStyle
 // @grant          GM_getResourceText
 // @grant          window.onurlchange
-// @resource style https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/refs/tags/v1.4/chat-monitor.css
+// @resource style https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/refs/tags/v1.9/chat-monitor.css
 // ==/UserScript==
 
 // non-blocking stylesheet injection
 GM.getResourceText("style").then(GM.addStyle);
 
-const EVENT = "DBEx2026";
+const EVENT = "DB2026_preview";
 // userscript storage keys
 const K_REMINDERS = "hideReminders";
 const K_REMINDERS_OLD = "hideRemindersUntil";
