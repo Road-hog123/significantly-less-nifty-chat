@@ -5,8 +5,6 @@
 // @match          *://www.twitch.tv/*
 // @match          *://m.twitch.tv/*
 // @version        1.9
-// @updateURL      https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/master/chat-monitor.user.js
-// @downloadURL    https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/master/chat-monitor.user.js
 // @grant          GM_getValue
 // @grant          GM_setValue
 // @grant          GM_deleteValue
