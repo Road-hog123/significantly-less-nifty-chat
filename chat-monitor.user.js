@@ -8,14 +8,18 @@
 // @grant          GM_getValue
 // @grant          GM_setValue
 // @grant          GM_deleteValue
-// @grant          GM_addStyle
-// @grant          GM_getResourceText
+// @grant          GM.getResourceUrl
 // @grant          window.onurlchange
 // @resource style chat-monitor.css
 // ==/UserScript==
 
 // non-blocking stylesheet injection
-GM.getResourceText("style").then(GM.addStyle);
+GM.getResourceUrl("style").then(url => {
+    const link = document.createElement("link");
+    link.href = url;
+    link.rel = "stylesheet";
+    document.head.append(link);
+});
 
 const EVENT = "DB2026_preview";
 // userscript storage keys
