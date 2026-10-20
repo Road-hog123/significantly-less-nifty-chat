@@ -11,7 +11,7 @@
 // @grant          GM_addStyle
 // @grant          GM_getResourceText
 // @grant          window.onurlchange
-// @resource style https://raw.githubusercontent.com/road-hog123/significantly-less-nifty-chat/refs/tags/v1.9/chat-monitor.css
+// @resource style chat-monitor.css
 // ==/UserScript==
 
 // non-blocking stylesheet injection
